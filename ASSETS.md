@@ -3,31 +3,13 @@
 Replacements for the emoji the board uses today (`src/client/tileArt.ts`). The same files
 will also be used in the properties panel and on deed cards, so they appear at several sizes.
 
-**14 flags + 15 icons** cover all four maps. House and Hotel are optional.
+**15 icons** still to source; the flags are done. House and Hotel are optional.
 
-## Flags: 14 countries
+## Flags: done
 
-Cropped to a circle and centred on the tile's inner border. Square artwork with the key
-element centred works best; a rectangular flag loses detail in the crop (China's stars sit
-left, the US canton sits in a corner). Round sets exist already, e.g. HatScripts'
-`circle-flags` on GitHub, which I believe is MIT-licensed. Check its licence before using it.
-
-| File | Country | Maps |
-|---|---|---|
-| `flags/brazil.svg` | Brazil | Classic, Mr. Worldwide |
-| `flags/canada.svg` | Canada | Death Valley |
-| `flags/china.svg` | China | Classic, Mr. Worldwide, Lucky Wheel |
-| `flags/france.svg` | France | Classic, Mr. Worldwide |
-| `flags/germany.svg` | Germany | all four |
-| `flags/india.svg` | India | Mr. Worldwide |
-| `flags/ireland.svg` | Ireland | Lucky Wheel |
-| `flags/israel.svg` | Israel | Classic, Mr. Worldwide |
-| `flags/italy.svg` | Italy | Classic, Mr. Worldwide, Lucky Wheel |
-| `flags/japan.svg` | Japan | Mr. Worldwide |
-| `flags/romania.svg` | Romania | Lucky Wheel |
-| `flags/turkey.svg` | Turkey | Lucky Wheel |
-| `flags/united-kingdom.svg` | United Kingdom | all four |
-| `flags/united-states-of-america.svg` | United States | all four |
+All 14 are in `src/client/assets/flags/`, from HatScripts' `circle-flags` (MIT). The source,
+commit and licence are in that folder's `README.md` and `LICENSE.md`, and the attribution
+is in `public/THIRD_PARTY_NOTICES.txt`, which the home page links to.
 
 ## Icons: 15
 
@@ -51,9 +33,8 @@ left, the US canton sits in a corner). Round sets exist already, e.g. HatScripts
 
 Lucky Wheel has no utilities.
 
-**Classic only, for a first pass:** 8 flags (Brazil, Israel, Italy, Germany, China, France,
-United Kingdom, United States) and 12 icons (everything except Gas Company, Tax Refund, House
-and Hotel).
+**Classic only, for a first pass:** 12 icons (everything except Gas Company, Tax Refund,
+House and Hotel).
 
 ## Format
 

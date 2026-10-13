@@ -48,6 +48,12 @@ export function Home() {
           <button className="btn" type="submit" disabled={!joinCode.trim()}>Join</button>
         </form>
       </div>
+      {/* Attribution the licences ask for; the full texts are served from `public/`. */}
+      <footer className="home__credits">
+        Flags by <a href="https://github.com/HatScripts/circle-flags" target="_blank" rel="noreferrer">circle-flags</a> (MIT)
+        {' · '}Fonts: Nunito, Nunito Sans, Comfortaa (SIL OFL)
+        {' · '}<a href="/THIRD_PARTY_NOTICES.txt" target="_blank" rel="noreferrer">Licences</a>
+      </footer>
     </div>
   );
 }
