@@ -59,8 +59,19 @@ export function createGame(
 function canMutateAssetsNormally(state: GameState, playerId: PlayerId): boolean {
   return (
     currentPlayer(state).id === playerId &&
-    (state.phase === 'AWAITING_ROLL' || state.phase === 'AWAITING_END_TURN')
+    (state.phase === 'AWAITING_ROLL' || state.phase === 'AWAITING_BUY' || state.phase === 'AWAITING_END_TURN')
   );
+}
+
+/**
+ * There is no decline action: a player who doesn't want the property just carries on, with
+ * "End turn" or, after doubles, "Roll again". Either one passes on the purchase first, which
+ * moves the phase on exactly as buying would have, and the handler's own checks then decide
+ * which of the two is allowed.
+ */
+function passOnPurchase(state: GameState, playerId: PlayerId): GameState {
+  if (state.phase !== 'AWAITING_BUY' || currentPlayer(state).id !== playerId) return state;
+  return { ...state, phase: phaseAfterLanding(state) };
 }
 
 function canSellDuringDebt(state: GameState, playerId: PlayerId): boolean {
@@ -145,12 +156,6 @@ function handleBuy(map: GameMap, state: GameState, playerId: PlayerId): ActionRe
   ]);
 }
 
-function handleDeclineBuy(state: GameState, playerId: PlayerId): ActionResult {
-  if (state.phase !== 'AWAITING_BUY') return reject(state, 'Not awaiting a buy decision');
-  if (currentPlayer(state).id !== playerId) return reject(state, 'Not your turn');
-  return ok({ ...state, phase: phaseAfterLanding(state) }, []);
-}
-
 function handlePayJailFee(state: GameState, playerId: PlayerId): ActionResult {
   if (state.phase !== 'AWAITING_ROLL') return reject(state, 'Can only pay the jail fee before rolling');
   if (currentPlayer(state).id !== playerId) return reject(state, 'Not your turn');
@@ -206,11 +211,9 @@ function dispatch(map: GameMap, state: GameState, playerId: PlayerId, action: Ga
       return ok({ ...state, phase: 'AWAITING_ROLL' }, [{ type: 'game_started', turnOrder: state.turnOrder }]);
     }
     case 'roll':
-      return handleRoll(map, state, playerId, rng);
+      return handleRoll(map, passOnPurchase(state, playerId), playerId, rng);
     case 'buy':
       return handleBuy(map, state, playerId);
-    case 'decline_buy':
-      return handleDeclineBuy(state, playerId);
     case 'buy_house': {
       if (!canMutateAssetsNormally(state, playerId)) return reject(state, 'Cannot build right now');
       return buyHouse(map, state, playerId, action.tileIndex);
@@ -245,7 +248,7 @@ function dispatch(map: GameMap, state: GameState, playerId: PlayerId, action: Ga
     case 'use_pardon':
       return handleUsePardon(state, playerId);
     case 'end_turn':
-      return handleEndTurn(state, playerId);
+      return handleEndTurn(passOnPurchase(state, playerId), playerId);
     case 'declare_bankruptcy':
       return handleDeclareBankruptcy(map, state, playerId);
     case 'propose_trade':

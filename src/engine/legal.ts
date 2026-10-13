@@ -1,6 +1,7 @@
 import type { GameAction, GameMap, GameState, PlayerId } from '../shared/types';
 import { buyHotel, buyHouse, sellHotel, sellHouse } from './buildings';
 import { sellProperty } from './propertySale';
+import { phaseAfterLanding } from './debt';
 import { currentPlayer, ownableTileIndices } from './state';
 import { canAcceptTrade } from './trades';
 
@@ -30,7 +31,8 @@ export function legalActions(map: GameMap, state: GameState, playerId: PlayerId)
   }
 
   if (isCurrent && state.phase === 'AWAITING_BUY') {
-    actions.push({ type: 'decline_buy' });
+    // Not buying is just carrying on: rolling again after doubles, else ending the turn.
+    actions.push({ type: phaseAfterLanding(state) === 'AWAITING_ROLL' ? 'roll' : 'end_turn' });
     const tile = map.tiles[player.tileIndex]!;
     if ((tile.type === 'city' || tile.type === 'airport' || tile.type === 'company') && player.cash >= tile.price) {
       actions.push({ type: 'buy' });
@@ -41,7 +43,7 @@ export function legalActions(map: GameMap, state: GameState, playerId: PlayerId)
     actions.push({ type: 'end_turn' });
   }
 
-  const canBuild = isCurrent && (state.phase === 'AWAITING_ROLL' || state.phase === 'AWAITING_END_TURN');
+  const canBuild = isCurrent && (state.phase === 'AWAITING_ROLL' || state.phase === 'AWAITING_BUY' || state.phase === 'AWAITING_END_TURN');
   const canSellForDebt = state.phase === 'RESOLVING_DEBT' && state.debt !== null && state.debt.debtor === playerId;
 
   if (canBuild || canSellForDebt) {

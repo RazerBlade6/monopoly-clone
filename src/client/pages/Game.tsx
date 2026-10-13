@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { GameAction, GameEvent, GameMap, GameState, PlayerId } from '../../shared/types';
 import { actingPlayerId } from '../acting';
+import { ActionBar } from '../components/ActionBar';
 import { Board } from '../components/Board';
 import { Sidebar } from '../components/Sidebar';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -61,7 +62,10 @@ export function Game({
         </div>
       </div>
       <div className="game__board-wrap">
-        <Board map={map} state={state} events={events} onTileClick={openCard} />
+        <Board
+          map={map} state={state} events={events} onTileClick={openCard}
+          controls={<ActionBar map={map} state={state} myPlayerId={myPlayerId} actingPlayerId={acting} onAction={act} />}
+        />
       </div>
       <Sidebar
         map={map} state={state} myPlayerId={myPlayerId} actingPlayerId={acting} onAction={act} onActAs={actAs}

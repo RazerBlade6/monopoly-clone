@@ -175,7 +175,7 @@ export interface Ownership {
 export type Phase =
   | 'LOBBY'
   | 'AWAITING_ROLL'
-  | 'AWAITING_BUY'      // landed on an unowned ownable; buy or decline
+  | 'AWAITING_BUY'      // landed on an unowned ownable; buy, or pass by ending the turn (or rolling again)
   | 'RESOLVING_DEBT'    // blocking: nobody rolls until it clears
   | 'AWAITING_END_TURN'
   | 'GAME_OVER';
@@ -240,7 +240,6 @@ export type GameAction =
   | { type: 'start_game' }
   | { type: 'roll' }
   | { type: 'buy' }
-  | { type: 'decline_buy' }
   | { type: 'buy_house'; tileIndex: number }
   | { type: 'sell_house'; tileIndex: number }
   | { type: 'buy_hotel'; tileIndex: number }

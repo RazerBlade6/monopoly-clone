@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GameEvent, GameState, MapId } from '../shared/types';
+import type { GameEvent, GameMap, GameState, MapId, Player } from '../shared/types';
 import { useLocation } from './router';
 import { Home } from './pages/Home';
 import { RoomContainer } from './pages/RoomContainer';
@@ -38,6 +38,21 @@ function useAnimatedFixture(mapId: MapId): { state: GameState; events: readonly 
   return { state, events };
 }
 
+/** Puts the fixture's current player (p1) at a given point in their turn, for `?turn=`. */
+function withTurn(map: GameMap, state: GameState, turn: string | null): GameState {
+  const unowned = map.tiles.find(t => t.type === 'city' && state.tiles[t.index]?.owner === null)?.index ?? 1;
+  const p1 = (patch: Partial<Player>) => state.players.map(p => (p.id === 'p1' ? { ...p, ...patch } : p));
+  switch (turn) {
+    case 'buy': return { ...state, phase: 'AWAITING_BUY', lastRoll: [4, 2], players: p1({ tileIndex: unowned }) };
+    case 'buy-doubles': return { ...state, phase: 'AWAITING_BUY', lastRoll: [3, 3], doublesCount: 1, players: p1({ tileIndex: unowned }) };
+    case 'doubles': return { ...state, phase: 'AWAITING_ROLL', lastRoll: [3, 3], doublesCount: 1 };
+    case 'end': return { ...state, phase: 'AWAITING_END_TURN' };
+    case 'jail': return { ...state, phase: 'AWAITING_ROLL', players: p1({ inJail: true, pardonCards: 1 }) };
+    case 'debt': return { ...state, phase: 'RESOLVING_DEBT', debt: { debtor: 'p1', amount: 120, creditor: 'p2', queued: [] }, players: p1({ cash: -120 }) };
+    default: return state;
+  }
+}
+
 /**
  * Renders a fixture instead of connecting to a room, so the board and
  * lobby can be eyeballed without a running server. See:
@@ -45,6 +60,7 @@ function useAnimatedFixture(mapId: MapId): { state: GameState; events: readonly 
  *   /?dev=lobby        (seated, as the host)
  *   /?dev=join         (the lobby before entering a name)
  *   /?dev=game
+ *   /?dev=game&turn=buy  (also: doubles, buy-doubles, end, jail, debt — the turn's buttons)
  */
 function DevPreview({ mode, mapId }: { mode: string; mapId: MapId }) {
   const { state, events } = useAnimatedFixture(mapId);
@@ -70,7 +86,8 @@ function DevPreview({ mode, mapId }: { mode: string; mapId: MapId }) {
   }
   if (mode === 'game') {
     const map = getMap(mapId);
-    return <Game map={map} state={state} myPlayerId="p1" events={events} onAction={() => {}} code="DEMO" />;
+    const turn = new URLSearchParams(window.location.search).get('turn');
+    return <Game map={map} state={withTurn(map, state, turn)} myPlayerId="p1" events={events} onAction={() => {}} code="DEMO" />;
   }
   return null;
 }
