@@ -331,9 +331,15 @@ button, input, select {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 4px;
-  overflow: hidden;
+  /* Visible, so a city's flag can straddle the tile's inner border (see `.tile__flag`).
+     Nothing else reaches the edge: the text box clips itself, and the tint is the tile's
+     own background, which `border-radius` rounds without any clipping. */
+  overflow: visible;
   min-width: 0;
   min-height: 0;
+  /* Above the board's middle, which the flags overhang. Each tile is its own stacking
+     context anyway (size containment), so this lifts the whole tile, flag included. */
+  z-index: 1;
 }
 .tile--corner { background: var(--surface); }
 
@@ -347,8 +353,9 @@ button, input, select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  justify-content: space-between;
+  /* Packed against the inner edge, badge first; the slack collects between the price
+     and the owner's slab on the outer rim. */
+  justify-content: flex-start;
   gap: 3cqmin;
   padding: 4cqmin;
   text-align: center;
@@ -362,9 +369,9 @@ button, input, select {
 .tile--o-left .tile__inner,
 .tile--o-right .tile__inner { writing-mode: vertical-rl; }
 .tile--o-left .tile__inner { transform: rotate(180deg); }
-/* Every run stacks inner-edge-first. In a vertical writing mode the block axis runs
-   right-to-left, and the left run is rotated 180deg on top of that, so both columns
-   need reversing to land the badge on the same edge the horizontal runs put it. */
+/* Every run stacks inner-edge-first, so `flex-start` is the inner edge on all four. In a
+   vertical writing mode the block axis runs right-to-left, and the left run is rotated
+   180deg on top of that, so both columns need reversing to match the horizontal runs. */
 .tile--o-top .tile__inner,
 .tile--o-left .tile__inner,
 .tile--o-right .tile__inner { flex-direction: column-reverse; }
@@ -379,8 +386,7 @@ button, input, select {
 .tile { --owner-bar: 24cqmin; }
 .tile--corner { --owner-bar: 0px; }
 
-/* Name and price ride together at the inner edge; `space-between` on the inner box drops
-   the flag or icon at the outer rim with the leftover depth between them. */
+/* Name and price ride together just outside the badge. */
 .tile__text {
   display: flex;
   flex-direction: column;
@@ -392,16 +398,25 @@ button, input, select {
      wrap against — content-sized, a long name would run off both ends instead. */
   align-self: stretch;
 }
-/* A corner has no owner bar and no run to read along, so its two lines just centre. */
+/* A corner has no owner bar and no run to read along, so its two lines just centre,
+   name above icon. */
 .tile--corner .tile__inner { justify-content: center; gap: 5cqmin; }
+.tile--corner .tile__icon { order: 1; }
 /* The slab is inset 2px from the tile edge, so the text has to clear its height *and*
    that inset — the 2px is absolute, not a share of the tile, or it stops covering on a
    dense board where 1cqmin is a fraction of a pixel. */
 .tile { --owner-clear: calc(var(--owner-bar) + 2px + 4cqmin); }
-.tile--o-bottom .tile__inner { padding-top: var(--owner-clear); }
-.tile--o-top .tile__inner { padding-bottom: var(--owner-clear); }
+.tile--o-bottom .tile__inner { padding-bottom: var(--owner-clear); }
+.tile--o-top .tile__inner { padding-top: var(--owner-clear); }
 .tile--o-left .tile__inner,
-.tile--o-right .tile__inner { padding-left: var(--owner-clear); }
+.tile--o-right .tile__inner { padding-right: var(--owner-clear); }
+/* A city's flag overhangs the inner edge by half, so its name starts below the other half.
+   Same physical-side caveat as above: the left run's 180deg makes its inner edge `left`. */
+.tile { --flag: 40cqmin; --flag-clear: calc(var(--flag) / 2 + 3cqmin); }
+.tile--city.tile--o-bottom .tile__inner { padding-top: var(--flag-clear); }
+.tile--city.tile--o-top .tile__inner { padding-bottom: var(--flag-clear); }
+.tile--city.tile--o-left .tile__inner,
+.tile--city.tile--o-right .tile__inner { padding-left: var(--flag-clear); }
 
 .tile__name {
   /* Nunito's own skeleton at its narrowest width, so the longest single words on any map
@@ -435,46 +450,52 @@ button, input, select {
 .tile__price { color: var(--muted); font-size: 17cqmin; }
 .tile--corner .tile__name { font-weight: 700; }
 
-/* The country reads as a round flag badge rather than a full-bleed rectangle.
-   `overflow: hidden` on a circle crops the emoji's own aspect to a disc; where the
-   platform has no flag glyph this degrades to the two-letter code, still legible. */
+/* The country reads as a round flag badge sitting on the tile's inner border, half on the
+   tile and half over the board's middle, the way richup draws it. Out of the text flow,
+   so the badge costs the tile only half its height. `overflow: hidden` on a circle crops
+   the emoji's own aspect to a disc; where the platform has no flag glyph this degrades
+   to the two-letter code, still legible. */
 .tile__flag {
-  width: 30cqmin;
-  height: 30cqmin;
-  flex-shrink: 0;
+  position: absolute;
+  z-index: 3;
+  width: var(--flag);
+  height: var(--flag);
   border-radius: 50%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24cqmin;
+  /* A flag glyph is a wide rectangle about three quarters as tall as its em, so it is set
+     larger than the disc and cropped, the way a round flag badge reads, not inset in it. */
+  font-size: calc(var(--flag) * 1.35);
   line-height: 1;
-  background: rgba(255,255,255,0.08);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.22), 0 1px 4px rgba(0,0,0,0.5);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.22), 0 2px 6px rgba(0,0,0,0.6);
 }
-/* Badges are pictures, not text: they opt out of the vertical writing mode, and on the
+.tile--o-bottom .tile__flag { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.tile--o-top .tile__flag { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+.tile--o-left .tile__flag { right: 0; top: 50%; transform: translate(50%, -50%); }
+.tile--o-right .tile__flag { left: 0; top: 50%; transform: translate(-50%, -50%); }
+/* Icons are pictures, not text: they opt out of the vertical writing mode, and on the
    left run they undo the inner box's 180deg so a "?" is not served upside down. */
-.tile--o-left .tile__flag, .tile--o-right .tile__flag,
 .tile--o-left .tile__icon, .tile--o-right .tile__icon { writing-mode: horizontal-tb; }
-.tile--o-left .tile__flag, .tile--o-left .tile__icon { transform: rotate(180deg); }
+.tile--o-left .tile__icon { transform: rotate(180deg); }
 
-/* Ownership is the loudest thing on a tile: a thick slab on the edge facing the
-   middle of the board, so who owns what reads from across the table. The country
-   group used to own this edge as a thin stripe; the tile tint and flag badge carry
-   that job now, which frees the bar for the owner alone. */
+/* Ownership is the loudest thing on a tile: a thick slab on the outer rim, so who owns
+   what reads from across the table. The inner edge belongs to the flag badge. */
 .tile__owner {
   position: absolute;
   z-index: 2;
   border-radius: 4px;
   box-shadow: 0 0 12px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.28);
 }
-.tile--o-bottom .tile__owner { top: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
-.tile--o-top .tile__owner { bottom: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
-.tile--o-left .tile__owner { right: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
-.tile--o-right .tile__owner { left: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
+.tile--o-bottom .tile__owner { bottom: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
+.tile--o-top .tile__owner { top: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
+.tile--o-left .tile__owner { left: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
+.tile--o-right .tile__owner { right: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
 
 /* Houses used to float in the tile's corner, where they landed on top of the flag badge.
-   They now sit in the text block under the price — a picture like the badge, so they opt
+   They sit in the text block under the price — a picture like the badge, so they opt
    out of the vertical writing mode and undo the left run's 180deg. */
 .tile__buildings { font-size: 10cqmin; line-height: 1; letter-spacing: -0.2em; }
 .tile--o-left .tile__buildings, .tile--o-right .tile__buildings { writing-mode: horizontal-tb; }
@@ -544,7 +565,9 @@ button, input, select {
   display: flex;
   min-height: 0;
   min-width: 0;
-  padding: calc(0.5rem * var(--tile-scale, 1));
+  /* Clears the flags that overhang the inner ring of tiles (half of a 40cqmin badge on a
+     tile about a twelfth of the board), so they never sit on the log's border. */
+  padding: calc(0.5rem * var(--tile-scale, 1) + 1.8cqmin);
 }
 .board__center-inner {
   position: relative;

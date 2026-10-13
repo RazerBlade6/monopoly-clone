@@ -203,20 +203,23 @@ function useWalkedTile(target: number, tileCount: number): number {
 }
 
 /**
- * Shifts a token toward the outer rim of the board, where a tile keeps its flag or icon.
- * The name and price sit at the inner edge, so the token covers the badge instead of the
- * words — a tile has to stay readable while it is occupied. Corners are square and roomy
- * enough not to need it.
+ * Stands a token on the tile's badge at the inner edge — the flag that sits on the border,
+ * or a non-city tile's icon just inside it. The badge is the one part of a tile that can be
+ * covered without losing anything: the name sits right beside it and stays readable, the
+ * owner's slab on the outer rim stays in view, and the tile's tint still says the country.
+ * A token is wider than the flag, so it is centred a little past the border, over the
+ * board's middle; centred on the tile side it would reach across into the name.
+ * Corners are square and roomy enough not to need it.
  */
 function badgeNudge(pos: GridPos): readonly [number, number] {
   // A corner reads upright and stacks its name above its icon, so the token drops onto
   // the icon rather than sitting dead centre across the name.
   if (pos.isCorner) return [0, 0.18];
   switch (pos.edge) {
-    case 'bottom': return [0, 0.28];
-    case 'top': return [0, -0.28];
-    case 'left': return [-0.28, 0];
-    default: return [0.28, 0];
+    case 'bottom': return [0, -0.56];
+    case 'top': return [0, 0.56];
+    case 'left': return [0.56, 0];
+    default: return [-0.56, 0];
   }
 }
 
@@ -386,10 +389,12 @@ function BoardTile({
       style={{ gridRow: row, gridColumn: col, backgroundImage: tile.type === 'city' ? countryTint(tile.countryId) : undefined }}
       title={tile.name}
     >
-      {/* Name and price at the inner edge, the flag or icon pushed to the outer rim with
-          the leftover depth between them. The token lands on that badge rather than on the
-          words, which is what keeps a tile readable while it is occupied. */}
+      {/* Inner edge to outer: the badge, then name and price, then the owner's slab on the
+          outer rim. A city's flag is not in this flow at all — it sits on the tile's inner
+          border, half over the board's middle (see `.tile__flag`), which leaves the whole
+          depth of the tile for the words. Other tiles keep their icon in the flow. */}
       <div className="tile__inner">
+        {icon && <div className="tile__icon">{icon}</div>}
         <div className="tile__text">
           <div className="tile__name">{tile.name}</div>
           {sub && <div className="tile__sub">{sub}</div>}
@@ -398,10 +403,8 @@ function BoardTile({
             <div className="tile__buildings">{hotel ? '🏨' : '🏠'.repeat(houses)}</div>
           )}
         </div>
-        {tile.type === 'city'
-          ? <div className="tile__flag">{countryFlag(tile.countryId)}</div>
-          : icon && <div className="tile__icon">{icon}</div>}
       </div>
+      {tile.type === 'city' && <div className="tile__flag">{countryFlag(tile.countryId)}</div>}
       {owner && <div className="tile__owner" style={{ background: owner.color }} title={owner.name} />}
     </div>
   );
