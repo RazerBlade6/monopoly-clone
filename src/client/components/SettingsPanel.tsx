@@ -86,65 +86,70 @@ export function SettingsPanel({
 }) {
   return (
     <div className="settings-panel">
-      <h3 className="settings-panel__title">Settings</h3>
+      <section className="settings-panel__group">
+        <h3 className="settings-panel__title">Game settings</h3>
 
-      <label className="settings-panel__field">
-        <span>Map</span>
-        <select
-          value={settings.mapId}
-          disabled={!editable}
-          onChange={e => onChange({ mapId: e.target.value as MapId })}
-        >
-          {MAP_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
-        </select>
-      </label>
+        <label className="settings-panel__field">
+          <span>Map</span>
+          <select
+            value={settings.mapId}
+            disabled={!editable}
+            onChange={e => onChange({ mapId: e.target.value as MapId })}
+          >
+            {MAP_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+          </select>
+        </label>
 
-      <label className="settings-panel__field">
-        <span>Starting cash</span>
-        <NumberField
-          value={settings.startingCash} min={0} step={100} disabled={!editable}
-          onCommit={v => onChange({ startingCash: v })}
-        />
-      </label>
+        <label className="settings-panel__field">
+          <span>Starting cash</span>
+          <NumberField
+            value={settings.startingCash} min={0} step={100} disabled={!editable}
+            onCommit={v => onChange({ startingCash: v })}
+          />
+        </label>
 
-      <label className="settings-panel__field">
-        <span>Max players</span>
-        <NumberField
-          value={settings.maxPlayers} min={Math.max(2, playerCount)} max={8} step={1} disabled={!editable}
-          onCommit={v => onChange({ maxPlayers: v })}
-        />
-      </label>
+        <label className="settings-panel__field">
+          <span>Max players</span>
+          <NumberField
+            value={settings.maxPlayers} min={Math.max(2, playerCount)} max={8} step={1} disabled={!editable}
+            onCommit={v => onChange({ maxPlayers: v })}
+          />
+        </label>
 
-      <label className="settings-panel__field">
-        <span>Start salary</span>
-        <NumberField
-          value={settings.startSalary} min={0} step={10} disabled={!editable}
-          onCommit={v => onChange({ startSalary: v })}
-        />
-      </label>
+        <label className="settings-panel__field">
+          <span>Start salary</span>
+          <NumberField
+            value={settings.startSalary} min={0} step={10} disabled={!editable}
+            onCommit={v => onChange({ startSalary: v })}
+          />
+        </label>
 
-      <label className="settings-panel__field">
-        <span>Prison fee</span>
-        <NumberField
-          value={settings.jailFee} min={0} step={10} disabled={!editable}
-          onCommit={v => onChange({ jailFee: v })}
-        />
-      </label>
+        <label className="settings-panel__field">
+          <span>Prison fee</span>
+          <NumberField
+            value={settings.jailFee} min={0} step={10} disabled={!editable}
+            onCommit={v => onChange({ jailFee: v })}
+          />
+        </label>
+      </section>
 
-      {TOGGLES.map(({ key, label, hint }) => (
-        <div key={key}>
-          <label className="settings-panel__toggle">
-            <input
-              type="checkbox"
-              checked={Boolean(settings[key])}
-              disabled={!editable}
-              onChange={e => onChange({ [key]: e.target.checked } as Partial<RoomSettings>)}
-            />
-            <span>{label}</span>
-          </label>
-          {hint && <p className="settings-panel__hint">{hint}</p>}
-        </div>
-      ))}
+      <section className="settings-panel__group">
+        <h3 className="settings-panel__title settings-panel__title--rules">Gameplay rules</h3>
+        {TOGGLES.map(({ key, label, hint }) => (
+          <div key={key}>
+            <label className="settings-panel__toggle">
+              <input
+                type="checkbox"
+                checked={Boolean(settings[key])}
+                disabled={!editable}
+                onChange={e => onChange({ [key]: e.target.checked } as Partial<RoomSettings>)}
+              />
+              <span>{label}</span>
+            </label>
+            {hint && <p className="settings-panel__hint">{hint}</p>}
+          </div>
+        ))}
+      </section>
 
       {!editable && <p className="settings-panel__note">Only the host can change settings.</p>}
     </div>
