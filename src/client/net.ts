@@ -175,6 +175,15 @@ class RoomConnection {
     this.sendRaw(msg);
   }
 
+  sendAction(action: GameAction, asPlayerId?: string): void {
+    this.clearError();
+    this.sendRaw(asPlayerId ? { type: 'action', action, asPlayerId } : { type: 'action', action });
+  }
+
+  clearError(): void {
+    if (this.snapshot.error !== null) this.patch({ error: null });
+  }
+
   join(name: string): void {
     this.pendingName = name;
     this.sendRaw({ type: 'join', name });
@@ -201,8 +210,12 @@ export interface RoomConnectionApi extends ConnState {
   addDummy: () => void;
   removePlayer: (playerId: string) => void;
   updateSettings: (settings: Partial<RoomSettings>) => void;
-  /** `asPlayerId` acts for one of your own dummy players; the server refuses any other id. */
+  /**
+   * `asPlayerId` acts for one of your own dummy players; the server refuses any other id.
+   * Sending clears `error`, so whatever error shows next is this action's refusal.
+   */
   sendAction: (action: GameAction, asPlayerId?: string) => void;
+  clearError: () => void;
   startGame: () => void;
 }
 
@@ -228,8 +241,8 @@ export function useRoomConnection(code: string): RoomConnectionApi {
     addDummy: () => connRef.current?.send({ type: 'add_dummy' }),
     removePlayer: (playerId: string) => connRef.current?.send({ type: 'remove_player', playerId }),
     updateSettings: (settings: Partial<RoomSettings>) => connRef.current?.send({ type: 'update_settings', settings }),
-    sendAction: (action: GameAction, asPlayerId?: string) =>
-      connRef.current?.send(asPlayerId ? { type: 'action', action, asPlayerId } : { type: 'action', action }),
+    sendAction: (action: GameAction, asPlayerId?: string) => connRef.current?.sendAction(action, asPlayerId),
+    clearError: () => connRef.current?.clearError(),
     startGame: () => connRef.current?.send({ type: 'action', action: { type: 'start_game' } }),
   };
 }

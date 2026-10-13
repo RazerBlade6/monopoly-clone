@@ -28,7 +28,9 @@ export function PlayerCard({
             {player.dummyOf && <span className="player-card__bot"> bot</span>}
             {!player.connected && <span className="player-card__offline"> offline</span>}
           </span>
-          <span className="player-card__cash">${player.cash}</span>
+          <span className={`player-card__cash${player.cash < 0 ? ' player-card__cash--negative' : ''}`}>
+            {player.cash < 0 ? `-$${-player.cash}` : `$${player.cash}`}
+          </span>
         </div>
         {player.inJail && <div className="player-card__jail">In prison (turn {player.jailTurns}/3)</div>}
         {owned.length > 0 && (

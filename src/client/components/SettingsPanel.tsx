@@ -8,12 +8,17 @@ const MAP_OPTIONS: ReadonlyArray<{ id: MapId; label: string }> = [
   { id: 'lucky-wheel', label: 'Lucky Wheel' },
 ];
 
-const TOGGLES: ReadonlyArray<{ key: keyof RoomSettings; label: string }> = [
+const TOGGLES: ReadonlyArray<{ key: keyof RoomSettings; label: string; hint?: string }> = [
   { key: 'evenBuild', label: 'Even build' },
   { key: 'randomizePlayerOrder', label: 'Randomize turn order' },
   { key: 'vacationCash', label: 'Vacation cash' },
   { key: 'noRentInPrison', label: 'No rent while in prison' },
   { key: 'unlimitedBuildings', label: 'Unlimited buildings' },
+  {
+    key: 'antiCollusion',
+    label: 'Anti-collusion (trades while in debt)',
+    hint: "Off: a player in debt can only make trades that bring in cash (richup's rule). On: the trade must clear the debt or not lose them value.",
+  },
 ];
 
 /**
@@ -126,16 +131,19 @@ export function SettingsPanel({
         />
       </label>
 
-      {TOGGLES.map(({ key, label }) => (
-        <label key={key} className="settings-panel__toggle">
-          <input
-            type="checkbox"
-            checked={Boolean(settings[key])}
-            disabled={!editable}
-            onChange={e => onChange({ [key]: e.target.checked } as Partial<RoomSettings>)}
-          />
-          <span>{label}</span>
-        </label>
+      {TOGGLES.map(({ key, label, hint }) => (
+        <div key={key}>
+          <label className="settings-panel__toggle">
+            <input
+              type="checkbox"
+              checked={Boolean(settings[key])}
+              disabled={!editable}
+              onChange={e => onChange({ [key]: e.target.checked } as Partial<RoomSettings>)}
+            />
+            <span>{label}</span>
+          </label>
+          {hint && <p className="settings-panel__hint">{hint}</p>}
+        </div>
       ))}
 
       {!editable && <p className="settings-panel__note">Only the host can change settings.</p>}

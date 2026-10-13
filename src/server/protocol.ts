@@ -36,6 +36,30 @@ function extraKeys(obj: Record<string, unknown>, allowed: readonly string[]): bo
   return Object.keys(obj).some((k) => !allowed.includes(k));
 }
 
+/** The largest board is 48 tiles; anything longer than that is junk, not a trade. */
+const MAX_TRADE_TILES = 64;
+const MAX_ID_LENGTH = 64;
+
+function isNonNegativeInt(v: unknown): v is number {
+  return typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+}
+
+function isId(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0 && v.length <= MAX_ID_LENGTH;
+}
+
+function isValidTradeSide(side: unknown): boolean {
+  return (
+    isPlainObject(side) &&
+    !extraKeys(side, ['cash', 'tiles', 'pardonCards']) &&
+    isNonNegativeInt(side.cash) &&
+    isNonNegativeInt(side.pardonCards) &&
+    Array.isArray(side.tiles) &&
+    side.tiles.length <= MAX_TRADE_TILES &&
+    side.tiles.every(isNonNegativeInt)
+  );
+}
+
 function isValidGameAction(action: unknown): action is GameAction {
   if (!isPlainObject(action) || typeof action.type !== 'string') return false;
   const type = action.type as GameAction['type'];
@@ -51,6 +75,20 @@ function isValidGameAction(action: unknown): action is GameAction {
       Number.isInteger(action.tileIndex) &&
       action.tileIndex >= 0
     );
+  }
+
+  if (type === 'propose_trade') {
+    return (
+      !extraKeys(action, ['type', 'to', 'offer', 'request', 'counterOf']) &&
+      isId(action.to) &&
+      isValidTradeSide(action.offer) &&
+      isValidTradeSide(action.request) &&
+      (action.counterOf === undefined || isId(action.counterOf))
+    );
+  }
+
+  if (type === 'accept_trade' || type === 'decline_trade' || type === 'cancel_trade') {
+    return !extraKeys(action, ['type', 'tradeId']) && isId(action.tradeId);
   }
 
   return false;
@@ -84,6 +122,7 @@ const SETTINGS_VALIDATORS: { [K in keyof RoomSettings]: (v: unknown) => boolean 
   jailFee: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
   companyRentMultipliers: (v) => Array.isArray(v) && v.every((n) => typeof n === 'number'),
   unlimitedBuildings: (v) => typeof v === 'boolean',
+  antiCollusion: (v) => typeof v === 'boolean',
 };
 
 function isValidSettingsPatch(patch: unknown): patch is Partial<RoomSettings> {

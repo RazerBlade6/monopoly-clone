@@ -5,8 +5,8 @@
  * landing on the new tile must resolve exactly like any other landing.
  *
  * Every branch here leaves `state.phase` fully decided by the time it
- * returns: AWAITING_BUY when a buy prompt is owed, whatever RESOLVING_DEBT /
- * GAME_OVER openDebt/settleBankruptcy produced, or phaseAfterLanding() when
+ * returns: AWAITING_BUY when a buy prompt is owed, RESOLVING_DEBT when
+ * openDebt left a balance owing, or phaseAfterLanding() when
  * nothing is left pending. Callers (reducer.ts) never need to second-guess it.
  */
 import type { Card, CardEffect, DeckId, GameEvent, GameMap, GameState, PlayerId, Tile } from '../shared/types';
@@ -49,7 +49,7 @@ function chargeOrDebt(map: GameMap, state: GameState, playerId: PlayerId, amount
     }
     return finish(next, [...events, { type: 'paid', from: playerId, to: creditor, amount, reason }]);
   }
-  const r = openDebt(map, state, playerId, amount, creditor);
+  const r = openDebt(state, playerId, amount, creditor);
   return { state: r.state, events: [...events, ...r.events] };
 }
 
@@ -194,7 +194,7 @@ export function applyCardEffect(map: GameMap, state: GameState, playerId: Player
       }
       const [first, ...rest] = others;
       const queued = rest.map((o) => ({ amount, creditor: o.id }));
-      const r = openDebt(map, state, playerId, amount, first!.id, queued);
+      const r = openDebt(state, playerId, amount, first!.id, queued);
       return { state: r.state, events: [...events, ...r.events] };
     }
 

@@ -58,6 +58,24 @@ type PlayerRow = {
 /** How long a disconnected player keeps their lobby seat when `LOBBY_GRACE_MS` is unset. */
 const DEFAULT_LOBBY_GRACE_MS = 120_000;
 
+/**
+ * A debt opened before balances could go negative left the debtor holding their cash while
+ * owing the full amount. The engine now expects `cash === -owed`, and would otherwise pay
+ * the creditor money the debtor never had, so shift such a balance down once on read. A
+ * debtor in the current model is always negative, which is what tells the two apart.
+ */
+function migrateDebtBalance(state: GameState): GameState {
+  const debt = state.debt;
+  if (!debt) return state;
+  const debtor = state.players.find((p) => p.id === debt.debtor);
+  if (!debtor || debtor.cash < 0) return state;
+  const owed = debt.amount + debt.queued.reduce((sum, q) => sum + q.amount, 0);
+  return {
+    ...state,
+    players: state.players.map((p) => (p.id === debtor.id ? { ...p, cash: p.cash - owed } : p)),
+  };
+}
+
 interface SocketAttachment {
   playerId: string;
 }
@@ -634,11 +652,20 @@ export class Room extends DurableObject<Env> {
 
   private getState(row: RoomRow): GameState | null {
     if (!row.state) return null;
-    const state = JSON.parse(row.state) as GameState;
+    type TradeFields = 'trades' | 'tradeSendCounts' | 'nextTradeId';
+    const stored = JSON.parse(row.state) as Omit<GameState, TradeFields> & Partial<Pick<GameState, TradeFields>>;
     // `createGame` snapshots the settings into the state, so a game already in flight
     // when a new setting shipped carries the same missing-key hazard as the room row
-    // (see `settingsOf`) — and here it would corrupt a live game, not a fresh one.
-    return { ...state, settings: { ...DEFAULT_SETTINGS, ...state.settings } };
+    // (see `settingsOf`) — and here it would corrupt a live game, not a fresh one. Games
+    // saved before trades shipped have no trade fields, so those default the same way.
+    const state: GameState = {
+      trades: [],
+      tradeSendCounts: {},
+      nextTradeId: 0,
+      ...stored,
+      settings: { ...DEFAULT_SETTINGS, ...stored.settings },
+    };
+    return migrateDebtBalance(state);
   }
 
   /** Persists a new state without touching `rng_state` — use for connection-flag writes. */

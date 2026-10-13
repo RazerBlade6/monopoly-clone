@@ -356,7 +356,7 @@ export function Board({
             )}
             {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
           </div>
-          <EventLog events={events} players={state.players} limit={6} />
+          <EventLog events={events} players={state.players} map={map} limit={6} />
         </div>
       </div>
     </div>

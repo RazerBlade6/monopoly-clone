@@ -35,3 +35,56 @@ describe('settings validation bounds', () => {
     }
   });
 });
+
+describe('trade action validation', () => {
+  const action = (a: Record<string, unknown>) => parseClientMessage({ type: 'action', action: a });
+  const side = { cash: 100, tiles: [1, 3], pardonCards: 1 };
+  const empty = { cash: 0, tiles: [], pardonCards: 0 };
+
+  it('accepts well-formed proposals, with or without counterOf', () => {
+    expect(action({ type: 'propose_trade', to: 'p2', offer: side, request: empty })).not.toBeNull();
+    expect(action({ type: 'propose_trade', to: 'p2', offer: side, request: empty, counterOf: 'trade-3' })).not.toBeNull();
+    expect(parseClientMessage({
+      type: 'action', asPlayerId: 'bot', action: { type: 'propose_trade', to: 'p2', offer: empty, request: side },
+    })).not.toBeNull();
+  });
+
+  it('rejects malformed proposals', () => {
+    const bad: Record<string, unknown>[] = [
+      { type: 'propose_trade', offer: side, request: empty },
+      { type: 'propose_trade', to: '', offer: side, request: empty },
+      { type: 'propose_trade', to: 7, offer: side, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: side },
+      { type: 'propose_trade', to: 'p2', offer: side, request: empty, extra: 1 },
+      { type: 'propose_trade', to: 'p2', offer: side, request: empty, counterOf: 5 },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, cash: -1 }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, cash: 1.5 }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, cash: '100' }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, pardonCards: -1 }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, tiles: [-1] }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, tiles: [1.5] }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, tiles: '1' }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, tiles: Array.from({ length: 65 }, (_, i) => i) }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { ...side, extra: true }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: { cash: 0, tiles: [] }, request: empty },
+      { type: 'propose_trade', to: 'p2', offer: null, request: empty },
+      { type: 'propose_trade', to: 'x'.repeat(65), offer: side, request: empty },
+    ];
+    for (const a of bad) expect(action(a), JSON.stringify(a)).toBeNull();
+  });
+
+  it('accepts accept/decline/cancel with a trade id and nothing else', () => {
+    for (const type of ['accept_trade', 'decline_trade', 'cancel_trade']) {
+      expect(action({ type, tradeId: 'trade-0' })).not.toBeNull();
+      expect(action({ type })).toBeNull();
+      expect(action({ type, tradeId: '' })).toBeNull();
+      expect(action({ type, tradeId: 0 })).toBeNull();
+      expect(action({ type, tradeId: 'trade-0', to: 'p2' })).toBeNull();
+    }
+  });
+
+  it('accepts the antiCollusion setting as a boolean only', () => {
+    expect(parseClientMessage({ type: 'update_settings', settings: { antiCollusion: true } })).not.toBeNull();
+    expect(parseClientMessage({ type: 'update_settings', settings: { antiCollusion: 'yes' } })).toBeNull();
+  });
+});

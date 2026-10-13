@@ -143,27 +143,6 @@ export function hotelSaleValue(tile: Extract<Tile, { type: 'city' }>): number {
   return Math.floor(tile.hotelPrice / 2);
 }
 
-/**
- * Cash a player could realize if fully liquidated: current cash plus half the
- * purchase price of every house and hotel they own. Selling a hotel always
- * nets half its price regardless of whether the bank has spare houses to
- * receive back (SPEC decision 17) — that only changes the bookkeeping, not
- * the cash. v1 has no mortgage, so there is no mortgage-value term.
- */
-export function maxLiquidationValue(map: GameMap, state: GameState, playerId: PlayerId): number {
-  const player = getPlayer(state, playerId);
-  let value = player.cash;
-  for (const { tile, ownership } of ownedTiles(map, state, playerId)) {
-    if (tile.type !== 'city') continue;
-    if (ownership.hotel) {
-      value += hotelSaleValue(tile);
-    } else {
-      value += ownership.houses * houseSaleValue(tile);
-    }
-  }
-  return value;
-}
-
 /** Advance one tile at a time, returning the resulting index and whether START was passed or landed on. */
 export function walkForward(map: GameMap, from: number, steps: number): { to: number; passedStart: boolean } {
   const n = map.tiles.length;

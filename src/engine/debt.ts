@@ -1,5 +1,11 @@
 /**
- * RESOLVING_DEBT: blocking phase, one active Debt at a time (SPEC decision 4).
+ * RESOLVING_DEBT: blocking phase, one active Debt at a time (SPEC decisions 4–6, 13).
+ *
+ * A charge the player can't cover takes everything they hold at once and leaves their
+ * balance negative by the remainder, so while in debt `cash === -(amount + queued)`. From
+ * then on every dollar they receive goes straight to their creditors in queue order
+ * (`payDebtFromIncome`) until the balance is back at 0. There is no auto-bankruptcy: a
+ * hopeless debtor declares it themselves.
  *
  * Every Debt-creating path in this engine has debtor === the current player
  * (rent/tax/card charges and money_from_each all fire during that player's
@@ -15,14 +21,13 @@ import {
   activePlayers,
   addToVacationPot,
   currentPlayer,
-  hotelSaleValue,
-  houseSaleValue,
-  maxLiquidationValue,
+  getPlayer,
   ownableTileIndices,
   updateBank,
   updatePlayer,
   updateTile,
 } from './state';
+import { dropTradesInvolving } from './trades';
 
 /** What phase to land in once a roll's landing resolution (and any debt it caused) is fully done. */
 export function phaseAfterLanding(state: GameState): Phase {
@@ -68,12 +73,22 @@ export function advanceTurn(state: GameState): { state: GameState; events: GameE
     // all its push is always events[0] — that player is the lander, not someone skipped.
     events.shift();
   }
-  return { state: { ...next, currentPlayerIndex: idx, doublesCount: 0 }, events };
+  // Trade send limits are per turn; a doubles re-roll never comes through here.
+  const tradeSendCounts = idx === state.currentPlayerIndex ? next.tradeSendCounts : {};
+  return { state: { ...next, currentPlayerIndex: idx, doublesCount: 0, tradeSendCounts }, events };
 }
 
-/** Opens a Debt and immediately attempts to settle it (SPEC decisions 4, 5, 13). */
+/** Everything the debtor still owes, across the current creditor and the queue. */
+export function totalOwed(debt: Debt): number {
+  return debt.amount + debt.queued.reduce((sum, q) => sum + q.amount, 0);
+}
+
+/**
+ * Opens a Debt for a charge the current player can't cover (SPEC decisions 4, 13). Their
+ * balance drops by the whole charge, going negative, and whatever they held is then paid
+ * over at once through the same routine as any later income.
+ */
 export function openDebt(
-  map: GameMap,
   state: GameState,
   debtorId: PlayerId,
   amount: number,
@@ -84,126 +99,121 @@ export function openDebt(
     throw new Error('Engine invariant violated: debt debtor must be the current player');
   }
   const debt: Debt = { debtor: debtorId, amount, creditor, queued };
-  const opened: GameState = { ...state, phase: 'RESOLVING_DEBT', debt };
-  return trySettleOrBankrupt(map, opened, [{ type: 'debt_opened', debt }]);
+  const debtor = getPlayer(state, debtorId);
+  let opened: GameState = { ...state, phase: 'RESOLVING_DEBT', debt };
+  opened = updatePlayer(opened, debtorId, { cash: debtor.cash - totalOwed(debt) });
+  return payDebtFromIncome(opened, [{ type: 'debt_opened', debt }]);
 }
 
 /**
- * Call after any cash change to the current debtor while RESOLVING_DEBT is
- * active (opening the debt, or after a building sale). Pays off the debt if
- * cash now covers it, cascades to the next queued creditor, auto-bankrupts
- * if liquidation can never cover it, or otherwise leaves the phase as-is
- * waiting for the debtor to sell more.
+ * The one pay-as-you-go routine. Call it after anything that may have raised the debtor's
+ * balance (opening the debt, a building sale, an accepted trade); it is a no-op otherwise.
+ *
+ * Anything above `-owed` is money the debtor has received since the last call, and it goes
+ * to the creditors in queue order. The debtor's own balance doesn't move here: it already
+ * went negative by the full amount when the debt opened, so a payment only shrinks what is
+ * owed. Once nothing is owed the debt clears and the turn carries on where landing left it.
  */
-export function trySettleOrBankrupt(
-  map: GameMap,
+export function payDebtFromIncome(
   state: GameState,
   events: GameEvent[] = [],
 ): { state: GameState; events: GameEvent[] } {
+  const debt = state.debt;
+  if (!debt) return { state, events };
+  const debtor = getPlayer(state, debt.debtor);
+  let available = debtor.cash + totalOwed(debt);
+  if (available <= 0) return { state, events };
+
   let next = state;
   const out = events.slice();
-
-  for (;;) {
-    const debt = next.debt;
-    if (!debt) return { state: next, events: out };
-    const debtor = next.players.find((p) => p.id === debt.debtor)!;
-
-    if (debtor.cash >= debt.amount) {
-      next = updatePlayer(next, debtor.id, { cash: debtor.cash - debt.amount });
-      if (debt.creditor) {
-        const creditor = next.players.find((p) => p.id === debt.creditor)!;
-        next = updatePlayer(next, creditor.id, { cash: creditor.cash + debt.amount });
-      } else {
-        next = addToVacationPot(next, debt.amount);
-      }
-      out.push({ type: 'paid', from: debtor.id, to: debt.creditor, amount: debt.amount, reason: 'debt' });
-
-      const [head, ...rest] = debt.queued;
-      if (head) {
-        next = { ...next, debt: { debtor: debtor.id, amount: head.amount, creditor: head.creditor, queued: rest } };
-        out.push({ type: 'debt_opened', debt: next.debt! });
-        continue; // re-check solvency against the next creditor in line
-      }
-      out.push({ type: 'debt_cleared', playerId: debtor.id });
-      next = { ...next, debt: null, phase: phaseAfterLanding(next) };
-      return { state: next, events: out };
+  const owed = [{ amount: debt.amount, creditor: debt.creditor }, ...debt.queued];
+  while (owed.length > 0 && available > 0) {
+    const head = owed[0]!;
+    const pay = Math.min(available, head.amount);
+    if (head.creditor) {
+      const c = getPlayer(next, head.creditor);
+      next = updatePlayer(next, head.creditor, { cash: c.cash + pay });
+    } else {
+      next = addToVacationPot(next, pay);
     }
-
-    if (maxLiquidationValue(map, next, debtor.id) < debt.amount) {
-      return settleBankruptcy(map, next, debtor.id, debt.creditor, out);
-    }
-
-    // Solvent-on-paper but cash-poor: stay in RESOLVING_DEBT, wait for the debtor to sell.
-    return { state: next, events: out };
+    out.push({ type: 'paid', from: debtor.id, to: head.creditor, amount: pay, reason: 'debt' });
+    available -= pay;
+    if (pay === head.amount) owed.shift();
+    else owed[0] = { amount: head.amount - pay, creditor: head.creditor };
   }
+
+  const [head, ...rest] = owed;
+  if (head) {
+    return { state: { ...next, debt: { debtor: debtor.id, amount: head.amount, creditor: head.creditor, queued: rest } }, events: out };
+  }
+  out.push({ type: 'debt_cleared', playerId: debtor.id });
+  return { state: { ...next, debt: null, phase: phaseAfterLanding(next) }, events: out };
 }
 
 /**
- * Full liquidation. Buildings always sell to the bank first regardless of
- * creditor (SPEC quick reference: "buildings sold to Bank even when
- * bankrupting to a player"). To the Bank, properties become unowned — v1 has
- * no auctions, matching the decline-to-buy rule. To a player, the debtor's
- * entire remaining cash and all their bare properties transfer to that one
- * creditor; any further queued creditors get nothing (SPEC decision 13).
+ * A creditor who goes bankrupt can no longer be paid, so whatever the debtor still owes
+ * them is written off rather than paid into the void. The debtor's balance rises by the
+ * same amount, which may clear the debt outright.
+ */
+function forgiveDebtsTo(state: GameState, creditorId: PlayerId, events: GameEvent[]): { state: GameState; events: GameEvent[] } {
+  const debt = state.debt;
+  if (!debt || debt.debtor === creditorId) return { state, events };
+  const owed = [{ amount: debt.amount, creditor: debt.creditor }, ...debt.queued];
+  const kept = owed.filter((o) => o.creditor !== creditorId);
+  const forgiven = totalOwed(debt) - kept.reduce((sum, o) => sum + o.amount, 0);
+  if (forgiven === 0) return { state, events };
+
+  const debtor = getPlayer(state, debt.debtor);
+  const next = updatePlayer(state, debtor.id, { cash: debtor.cash + forgiven });
+  const [head, ...rest] = kept;
+  if (head) {
+    return { state: { ...next, debt: { debtor: debtor.id, amount: head.amount, creditor: head.creditor, queued: rest } }, events };
+  }
+  return {
+    state: { ...next, debt: null, phase: phaseAfterLanding(next) },
+    events: [...events, { type: 'debt_cleared', playerId: debtor.id }],
+  };
+}
+
+/**
+ * Bankruptcy, whether declared in debt or as a concession (SPEC decisions 5, 30). Every
+ * building goes back to the bank supply and every property becomes unowned again, so the
+ * market gets it all back and nobody can be handed a lead. A creditor keeps what was already
+ * paid and gets nothing more; any positive cash goes to the bank.
  */
 export function settleBankruptcy(
   map: GameMap,
   state: GameState,
-  debtorId: PlayerId,
-  creditor: PlayerId | null,
+  playerId: PlayerId,
   events: GameEvent[] = [],
 ): { state: GameState; events: GameEvent[] } {
-  const out = events.slice();
+  let out = events.slice();
   let next = state;
-  const debtor = next.players.find((p) => p.id === debtorId)!;
+  const player = getPlayer(next, playerId);
 
-  let buildingCash = 0;
   let housesFreed = 0;
   let hotelsFreed = 0;
-  const ownedIndices: number[] = [];
   for (const index of ownableTileIndices(map)) {
     const ownership = next.tiles[index]!;
-    if (ownership.owner !== debtorId) continue;
-    ownedIndices.push(index);
-    const tile = map.tiles[index]!;
-    if (tile.type === 'city') {
-      if (ownership.hotel) {
-        buildingCash += hotelSaleValue(tile);
-        hotelsFreed += 1;
-      } else if (ownership.houses > 0) {
-        buildingCash += ownership.houses * houseSaleValue(tile);
-        housesFreed += ownership.houses;
-      }
-    }
+    if (ownership.owner !== playerId) continue;
+    if (ownership.hotel) hotelsFreed += 1;
+    else housesFreed += ownership.houses;
+    next = updateTile(next, index, { owner: null, houses: 0, hotel: false, mortgaged: false });
   }
   if (!next.settings.unlimitedBuildings && (housesFreed > 0 || hotelsFreed > 0)) {
     next = updateBank(next, { houses: next.bank.houses + housesFreed, hotels: next.bank.hotels + hotelsFreed });
   }
 
-  const debtorCash = debtor.cash;
-  const totalCash = debtorCash + buildingCash;
-  const newOwner: PlayerId | null = creditor;
-  for (const index of ownedIndices) {
-    next = updateTile(next, index, { owner: newOwner, houses: 0, hotel: false, mortgaged: false });
+  if (player.cash > 0) {
+    out.push({ type: 'paid', from: playerId, to: null, amount: player.cash, reason: 'bankruptcy_settlement' });
   }
-  if (creditor) {
-    const c = next.players.find((p) => p.id === creditor)!;
-    next = updatePlayer(next, creditor, { cash: c.cash + totalCash });
-  }
-  next = updatePlayer(next, debtorId, { cash: 0, bankrupt: true });
-  next = { ...next, debt: null };
-  // Two separate paid events, not one lumped sum: debtorCash is a real balance the debtor actually
-  // held (from: debtorId); buildingCash never touched the debtor's balance — it's the bank's payout
-  // for the liquidated buildings, sourced from the bank (from: null). Bundling them as one
-  // from:debtorId event would overstate the debtor's real cash outflow. To the Bank (creditor null)
-  // the buildingCash leg is the bank paying itself, so it emits nothing.
-  if (debtorCash > 0) {
-    out.push({ type: 'paid', from: debtorId, to: creditor, amount: debtorCash, reason: 'bankruptcy_settlement' });
-  }
-  if (buildingCash > 0 && creditor) {
-    out.push({ type: 'paid', from: null, to: creditor, amount: buildingCash, reason: 'bankruptcy_settlement' });
-  }
-  out.push({ type: 'bankrupt', playerId: debtorId, creditor });
+  // A negative balance is just the unpaid debt, which dies with the debt below.
+  next = updatePlayer(next, playerId, { cash: 0, bankrupt: true });
+  if (next.debt?.debtor === playerId) next = { ...next, debt: null };
+  out.push({ type: 'bankrupt', playerId, creditor: null });
+
+  ({ state: next, events: out } = dropTradesInvolving(next, playerId, out));
+  ({ state: next, events: out } = forgiveDebtsTo(next, playerId, out));
 
   const remaining = activePlayers(next);
   if (remaining.length <= 1) {
@@ -211,12 +221,12 @@ export function settleBankruptcy(
     // The game is over either way and `advanceTurn` has no seat to move to, but there is
     // no winner to name, so the event is omitted rather than crowning the bankrupt.
     const winner = remaining[0]?.id ?? null;
-    next = { ...next, phase: 'GAME_OVER', winner };
+    next = { ...next, phase: 'GAME_OVER', winner, debt: null, trades: [] };
     if (winner) out.push({ type: 'game_over', winner });
     return { state: next, events: out };
   }
 
-  if (debtorId === currentPlayer(next).id) {
+  if (playerId === currentPlayer(next).id) {
     const advanced = advanceTurn(next);
     next = { ...advanced.state, phase: 'AWAITING_ROLL' };
     out.push(...advanced.events, { type: 'turn_ended', nextPlayerId: currentPlayer(next).id });

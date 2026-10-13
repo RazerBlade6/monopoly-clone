@@ -198,6 +198,9 @@ export function fixtureGameState(mapId: MapId = 'classic'): GameState {
     lastRoll: [4, 3],
     vacationPot: 340,
     winner: null,
+    trades: [],
+    tradeSendCounts: {},
+    nextTradeId: 0,
   };
 }
 
