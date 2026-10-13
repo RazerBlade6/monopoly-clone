@@ -304,7 +304,7 @@ export function Board({
   events?: readonly GameEvent[];
   /** Absent where the board is scenery (the lobby) and nothing on it should respond. */
   onTileClick?: TileClickHandler;
-  /** The turn's buttons, between the dice and the log. Without them the phase is named instead. */
+  /** The turn's buttons, right under the dice. Without them the phase is named instead. */
   controls?: ReactNode;
 }) {
   const middleRef = useRef<HTMLDivElement>(null);
@@ -356,26 +356,25 @@ export function Board({
       />
       <div ref={middleRef} className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
         <div className="board__center-inner">
-          {/* The dice sit centred in the space above the log rather than pinned to the
-              top edge. The card popup lives inside the stage (`position: relative`) so it
-              covers just that area and leaves the log readable; being absolutely
-              positioned with `inset: 0`, it fills the stage rather than shrinking to the dice. */}
+          {/* The dice are always on show, sitting a little above the middle of the space
+              over the log, with the turn's buttons right under them. */}
           <div className="board__stage">
-            {state.lastRoll && (
-              <div className="board__dice">
-                <Die value={state.lastRoll[0]} turns={turns} />
-                <Die value={state.lastRoll[1]} turns={turns} />
-              </div>
-            )}
-            {!controls && <div className="board__phase">{formatPhase(state.phase)}</div>}
+            <div className={`board__dice${state.lastRoll ? '' : ' board__dice--idle'}`}>
+              <Die value={state.lastRoll?.[0] ?? 1} turns={turns} />
+              <Die value={state.lastRoll?.[1] ?? 1} turns={turns} />
+            </div>
+            {controls ?? <div className="board__phase">{formatPhase(state.phase)}</div>}
             {state.vacationPot > 0 && (
               <div className="board__vacation-pot">Vacation pot: ${state.vacationPot}</div>
             )}
+          </div>
+          {/* A drawn card covers the log for a few seconds rather than the dice or the
+              buttons; the log repeats the card's text, so nothing is lost while it's up.
+              Being absolutely positioned with `inset: 0`, it fills this box. */}
+          <div className="board__lower">
+            <EventLog events={events} players={state.players} map={map} limit={6} />
             {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
           </div>
-          {/* Outside the stage, so a drawn card never covers the button you need next. */}
-          {controls}
-          <EventLog events={events} players={state.players} map={map} limit={6} />
         </div>
       </div>
     </div>
