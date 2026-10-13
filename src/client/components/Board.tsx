@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GameEvent, GameMap, GameState, Player, Tile } from '../../shared/types';
 import { CORNER_TRACK_RATIO, ringLayout, trackSpan, type Edge, type GridPos } from '../ringLayout';
 import { countryTint } from '../colors';
@@ -297,13 +297,15 @@ function TokenLayer({
 export type TileClickHandler = (tileIndex: number, rect: DOMRect, middle: DOMRect) => void;
 
 export function Board({
-  map, state, events = [], onTileClick,
+  map, state, events = [], onTileClick, controls,
 }: {
   map: GameMap;
   state: GameState;
   events?: readonly GameEvent[];
   /** Absent where the board is scenery (the lobby) and nothing on it should respond. */
   onTileClick?: TileClickHandler;
+  /** The turn's buttons, between the dice and the log. Without them the phase is named instead. */
+  controls?: ReactNode;
 }) {
   const middleRef = useRef<HTMLDivElement>(null);
   const clickTile = onTileClick && ((tileIndex: number, el: HTMLElement) => {
@@ -365,12 +367,14 @@ export function Board({
                 <Die value={state.lastRoll[1]} turns={turns} />
               </div>
             )}
-            <div className="board__phase">{formatPhase(state.phase)}</div>
+            {!controls && <div className="board__phase">{formatPhase(state.phase)}</div>}
             {state.vacationPot > 0 && (
               <div className="board__vacation-pot">Vacation pot: ${state.vacationPot}</div>
             )}
             {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
           </div>
+          {/* Outside the stage, so a drawn card never covers the button you need next. */}
+          {controls}
           <EventLog events={events} players={state.players} map={map} limit={6} />
         </div>
       </div>

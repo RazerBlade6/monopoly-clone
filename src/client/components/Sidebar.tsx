@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { GameAction, GameMap, GameState, PlayerId } from '../../shared/types';
 import { PlayerCard } from './PlayerCard';
-import { ActionBar } from './ActionBar';
+import { BankruptButton } from './ActionBar';
 import { TradesPanel } from './TradesPanel';
 import { PropertiesPanel } from './PropertiesPanel';
 import { controls } from '../acting';
@@ -51,10 +51,13 @@ export function Sidebar({
         state={state} myPlayerId={myPlayerId} onView={onViewTrade}
         onNewTrade={canTrade ? onTrade : undefined} canPickPartner={hasPartner}
       />
-      <ActionBar
-        state={state} myPlayerId={myPlayerId}
-        actingPlayerId={actingPlayerId} onAction={onAction}
-      />
+      {/* Kept out here, away from the turn buttons in the middle of the board, so a quick
+          click there can never land on it. */}
+      {canTrade && (
+        <div className="sidebar__bankrupt">
+          <BankruptButton onAction={onAction} />
+        </div>
+      )}
       {shown && (
         <PropertiesPanel
           map={map} state={state} player={shown} isMe={shown.id === myPlayerId}
