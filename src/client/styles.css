@@ -109,21 +109,63 @@ button, input, select {
 
 /* ─── Lobby ─────────────────────────────────────────────────────────── */
 
-.lobby { max-width: 720px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
-.lobby--join { max-width: 380px; height: 100%; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-.lobby--join form { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+/* The lobby is the game shell (`.game`) before the game starts: the chosen board sits
+   blurred in the middle column, and the join form or room settings float over it. */
+.lobby__board-wrap { position: relative; }
+.lobby__board {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  /* Scenery, not a control: dimmed and out of focus, and clicks fall through to nothing. */
+  filter: blur(7px) brightness(0.55) saturate(0.85);
+  pointer-events: none;
+  user-select: none;
+}
+.lobby__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
 .lobby__card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)), var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)), rgba(34, 27, 58, 0.92);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1.75rem;
+  width: 100%; max-width: 40rem; max-height: 100%; overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  display: flex; flex-direction: column; gap: 1.1rem;
+  animation: lobby-card-in 0.25s ease-out;
 }
-.lobby .brand { text-align: center; font-size: 2rem; padding-bottom: 0; }
-.lobby__share {
-  display: flex; align-items: center; gap: 0.75rem; background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem;
+@keyframes lobby-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
 }
-.lobby__share-url { flex: 1; overflow-x: auto; white-space: nowrap; font-family: ui-monospace, monospace; color: var(--muted); }
-.lobby__body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (prefers-reduced-motion: reduce) {
+  .lobby__card { animation: none; }
+}
+.lobby__heading { margin: 0; text-align: center; font-size: 1.35rem; }
+.lobby__join { display: flex; flex-direction: column; gap: 0.75rem; }
+/* Inside the card the settings carry no chrome of their own, and the two sections sit
+   side by side so the whole panel fits over the board without scrolling. */
+.lobby__card .settings-panel {
+  background: none; border: none; box-shadow: none; padding: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.75rem;
+}
+.lobby__card .settings-panel__note { grid-column: 1 / -1; margin: 0; text-align: center; }
+.lobby__footer { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.lobby__footer .lobby__waiting { margin: 0; font-size: 0.9rem; }
+.lobby .rail--right .player-list { padding: 0.85rem; }
+
+@media (max-width: 900px) {
+  /* Stacked, there is no board-sized space to float over, so the card takes the board's
+     place in the column instead. */
+  .lobby__board { display: none; }
+  .lobby__overlay { position: static; padding: 0; }
+  .lobby__card { max-height: none; }
+}
+@media (max-width: 640px) {
+  .lobby__card .settings-panel { grid-template-columns: 1fr; }
+}
 .lobby__waiting { color: var(--muted); text-align: center; }
 .lobby__dev {
   padding: 0.85rem; border-radius: var(--radius); background: var(--surface);
@@ -140,10 +182,6 @@ button, input, select {
 }
 .player-list__remove { margin-left: auto; }
 
-@media (max-width: 640px) {
-  .lobby__body { grid-template-columns: 1fr; }
-}
-
 .player-list, .settings-panel {
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)), var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem;
@@ -154,7 +192,9 @@ button, input, select {
 .rail .settings-panel {
   background: none; border: none; box-shadow: none; padding: 0;
 }
-.rail .settings-panel__title { display: none; }
+/* The panel is already titled "Game settings"; only the rules subheading shows. */
+.rail .settings-panel__title:not(.settings-panel__title--rules) { display: none; }
+.rail .settings-panel__title--rules { font-size: 0.75rem; letter-spacing: 0.08em; margin: 0.4rem 0 0.55rem; }
 .rail .settings-panel__field { font-size: 0.85rem; }
 .rail .settings-panel__toggle { font-size: 0.85rem; }
 .player-list__title, .settings-panel__title, .event-log__title { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }

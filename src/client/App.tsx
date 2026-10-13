@@ -42,7 +42,8 @@ function useAnimatedFixture(mapId: MapId): { state: GameState; events: readonly 
  * Renders a fixture instead of connecting to a room, so the board and
  * lobby can be eyeballed without a running server. See:
  *   /?dev=board&map=mr-worldwide   (48-tile board; try each MapId)
- *   /?dev=lobby
+ *   /?dev=lobby        (seated, as the host)
+ *   /?dev=join         (the lobby before entering a name)
  *   /?dev=game
  */
 function DevPreview({ mode, mapId }: { mode: string; mapId: MapId }) {
@@ -57,11 +58,11 @@ function DevPreview({ mode, mapId }: { mode: string; mapId: MapId }) {
       </div>
     );
   }
-  if (mode === 'lobby') {
+  if (mode === 'lobby' || mode === 'join') {
     return (
       <Lobby
         code="DEMO" status="open" room={fixtureRoomMeta()} players={fixturePlayers()}
-        myPlayerId="p1" error={null} onJoin={() => {}} onLeave={() => {}}
+        myPlayerId={mode === 'lobby' ? 'p1' : null} error={null} onJoin={() => {}} onLeave={() => {}}
         onAddDummy={() => {}} onRemovePlayer={() => {}}
         onUpdateSettings={() => {}} onStart={() => {}}
       />
