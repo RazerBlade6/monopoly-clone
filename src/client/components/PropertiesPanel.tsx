@@ -4,7 +4,7 @@ import { propertySaleValue } from '../../engine/state';
 import { assetBlockedReason } from '../assetGate';
 import { countryColor } from '../colors';
 import { groupProperties } from '../propertyOrder';
-import { countryFlag, tileIcon } from '../tileArt';
+import { TileBadge } from './TileBadge';
 
 function development(houses: number, hotel: boolean): string | null {
   if (hotel) return 'Hotel';
@@ -49,7 +49,7 @@ export function PropertiesPanel({
                 >
                   {/* The row and its Sell button are siblings, so a click on Sell can't open the card. */}
                   <button type="button" className="properties-row__open" onClick={e => onOpen(tile.index, e.currentTarget.getBoundingClientRect())}>
-                    <span className="trade-tile__badge">{tile.type === 'city' ? countryFlag(tile.countryId) : tileIcon(tile)}</span>
+                    <TileBadge tile={tile} className="trade-tile__badge" />
                     <span className="properties-row__text">
                       <span className="properties-row__name">{tile.name}</span>
                       {dev && <span className="properties-row__dev">{dev}</span>}

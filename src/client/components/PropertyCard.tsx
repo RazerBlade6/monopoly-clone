@@ -7,7 +7,7 @@ import {
 import { controls } from '../acting';
 import { assetBlockedReason, type AssetAction } from '../assetGate';
 import { countryColor, displayName } from '../colors';
-import { countryFlag, tileIcon } from '../tileArt';
+import { TileBadge } from './TileBadge';
 
 type CityTile = Extract<Tile, { type: 'city' }>;
 
@@ -118,9 +118,7 @@ export function PropertyCard({
     return null;
   }
 
-  const header = tile.type === 'city'
-    ? { color: countryColor(tile.countryId), badge: countryFlag(tile.countryId) }
-    : { color: '#5d5876', badge: tileIcon(tile) };
+  const headerColor = tile.type === 'city' ? countryColor(tile.countryId) : '#5d5876';
 
   let rows: RentRow[];
   let current: number;
@@ -158,9 +156,9 @@ export function PropertyCard({
       ref={ref} className="deed" role="dialog" aria-labelledby="deed-title" tabIndex={-1}
       style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
     >
-      <div className="deed__header" style={{ background: header.color }}>
+      <div className="deed__header" style={{ background: headerColor }}>
         <button className="deed__close" onClick={onClose} aria-label="Close">✕</button>
-        <span className="deed__badge" aria-hidden="true">{header.badge}</span>
+        <TileBadge tile={tile} className="deed__badge" />
         <h2 id="deed-title" className="deed__name">{tile.name}</h2>
         {tile.type === 'city' && <span className="deed__country">{displayName(tile.countryId)}</span>}
       </div>

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameEvent, GameMap, GameState, Player, Tile } from '../../shared/types';
 import { CORNER_TRACK_RATIO, ringLayout, trackSpan, type Edge, type GridPos } from '../ringLayout';
 import { countryTint } from '../colors';
-import { countryFlag, tileIcon, tileSubLabel } from '../tileArt';
+import { tileIcon, tileSubLabel } from '../tileArt';
+import { FlagImage } from './TileBadge';
 import { EventLog, getCardSafe } from './EventLog';
 
 function formatPhase(phase: GameState['phase']): string {
@@ -433,7 +434,7 @@ function BoardTile({
           )}
         </div>
       </div>
-      {tile.type === 'city' && <div className="tile__flag">{countryFlag(tile.countryId)}</div>}
+      {tile.type === 'city' && <div className="tile__flag"><FlagImage tile={tile} /></div>}
       {owner && <div className="tile__owner" style={{ background: owner.color }} title={owner.name} />}
     </div>
   );

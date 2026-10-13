@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { GameAction, GameMap, GameState, OwnableTile, Player, PlayerId, TradeSide } from '../../shared/types';
 import { TRADE_SEND_LIMIT } from '../../engine/trades';
-import { countryFlag, tileIcon } from '../tileArt';
+import { TileBadge } from './TileBadge';
 
 /**
  * `self` is the seat this tab is trading as: its own, or one of its dummies. The left column
@@ -357,7 +357,7 @@ function TradeColumn({
               disabled={!editable || built}
               title={built ? 'Sell the buildings in this country before trading it' : tile.name}
             >
-              <span className="trade-tile__badge">{tile.type === 'city' ? countryFlag(tile.countryId) : tileIcon(tile)}</span>
+              <TileBadge tile={tile} className="trade-tile__badge" />
               <span className="trade-tile__name">{tile.name}</span>
               <span className="trade-tile__price">${tile.price}</span>
             </button>

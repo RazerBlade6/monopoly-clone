@@ -5,28 +5,39 @@ import type { CountryId, Tile } from '../shared/types';
  * flag badge rather than a colour stripe — the maps model groups as real countries,
  * so the flag is both the most legible grouping cue and the most obvious one.
  *
- * Emoji only: the client ships no image assets and loads no external fonts.
+ * Flags are round SVGs from circle-flags (MIT; see `assets/flags/README.md`), bundled
+ * rather than hotlinked so the app makes no third-party requests. Everything else is
+ * still emoji until its art arrives (see ASSETS.md).
  */
 
-const FLAGS: Record<CountryId, string> = {
-  brazil: '🇧🇷',
-  canada: '🇨🇦',
-  china: '🇨🇳',
-  france: '🇫🇷',
-  germany: '🇩🇪',
-  india: '🇮🇳',
-  ireland: '🇮🇪',
-  israel: '🇮🇱',
-  italy: '🇮🇹',
-  japan: '🇯🇵',
-  romania: '🇷🇴',
-  turkey: '🇹🇷',
-  'united-kingdom': '🇬🇧',
-  'united-states-of-america': '🇺🇸',
+/** ISO 3166-1 alpha-2 codes, which are circle-flags' file names. */
+const FLAG_CODES: Record<CountryId, string> = {
+  brazil: 'br',
+  canada: 'ca',
+  china: 'cn',
+  france: 'fr',
+  germany: 'de',
+  india: 'in',
+  ireland: 'ie',
+  israel: 'il',
+  italy: 'it',
+  japan: 'jp',
+  romania: 'ro',
+  turkey: 'tr',
+  'united-kingdom': 'gb',
+  'united-states-of-america': 'us',
 };
 
-export function countryFlag(id: CountryId): string {
-  return FLAGS[id];
+/** Bundled flag URLs by file, content-hashed by Vite. */
+const FLAG_URLS = import.meta.glob<string>('./assets/flags/*.svg', {
+  eager: true, query: '?url', import: 'default',
+});
+
+export function flagUrl(id: CountryId): string {
+  const url = FLAG_URLS[`./assets/flags/${FLAG_CODES[id]}.svg`];
+  // A missing file is a build mistake, not a runtime condition; fail loudly in development.
+  if (!url) throw new Error(`no flag asset for ${id} (${FLAG_CODES[id]}.svg)`);
+  return url;
 }
 
 /** Companies differ by name across maps (Power / Water / Gas), so key off the name. */
@@ -36,7 +47,7 @@ function companyIcon(name: string): string {
   return '⚡';
 }
 
-/** The glyph shown in the body of a non-city tile. Cities use their flag instead. */
+/** The glyph shown in the body of a non-city tile. Cities use their flag instead (`flagUrl`). */
 export function tileIcon(tile: Tile): string {
   switch (tile.type) {
     case 'airport':
@@ -61,7 +72,7 @@ export function tileIcon(tile: Tile): string {
       }
       break;
     case 'city':
-      return countryFlag(tile.countryId);
+      return '';
   }
   return '';
 }
