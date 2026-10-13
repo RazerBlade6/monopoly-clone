@@ -39,10 +39,11 @@ export function Game({
   };
   const closeTrade = useCallback(() => setTradeMode(null), []);
 
-  const [card, setCard] = useState<{ tileIndex: number; rect: DOMRect } | null>(null);
-  const openCard = (tileIndex: number, rect: DOMRect) => {
+  // `within` is set when a board tile opened the card, so it opens into the board's middle.
+  const [card, setCard] = useState<{ tileIndex: number; rect: DOMRect; within?: DOMRect } | null>(null);
+  const openCard = (tileIndex: number, rect: DOMRect, within?: DOMRect) => {
     onClearError();
-    setCard({ tileIndex, rect });
+    setCard({ tileIndex, rect, ...(within ? { within } : {}) });
   };
   const closeCard = useCallback(() => setCard(null), []);
 
@@ -60,7 +61,7 @@ export function Game({
         </div>
       </div>
       <div className="game__board-wrap">
-        <Board map={map} state={state} events={events} />
+        <Board map={map} state={state} events={events} onTileClick={openCard} />
       </div>
       <Sidebar
         map={map} state={state} myPlayerId={myPlayerId} actingPlayerId={acting} onAction={act} onActAs={actAs}
@@ -80,7 +81,8 @@ export function Game({
       {card && (
         <PropertyCard
           key={card.tileIndex}
-          map={map} state={state} tileIndex={card.tileIndex} anchor={card.rect} myPlayerId={myPlayerId} error={error}
+          map={map} state={state} tileIndex={card.tileIndex} anchor={card.rect} {...(card.within ? { within: card.within } : {})}
+          myPlayerId={myPlayerId} error={error}
           onAction={actAs} onClose={closeCard}
         />
       )}
