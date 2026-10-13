@@ -592,10 +592,9 @@ button, input, select {
   text-align: center;
   color: var(--muted);
 }
-/* The dice sit centred in the space above the log rather than pinned to the top edge. */
+/* The dice and the turn's buttons, centred in the space above the log and then lifted a
+   little (the bottom padding), so they read as the board's focal point. */
 .board__stage {
-  /* Containing block for the drawn-card popup, so it covers the stage and not the log. */
-  position: relative;
   width: 100%;
   flex: 1;
   min-height: 0;
@@ -603,9 +602,22 @@ button, input, select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(0.5rem * var(--tile-scale, 1));
+  gap: calc(0.8rem * var(--tile-scale, 1));
+  padding-bottom: calc(2.5rem * var(--tile-scale, 1));
 }
 .board__dice { display: flex; gap: 0.9rem; justify-content: center; flex-shrink: 0; }
+/* Nobody has rolled yet: the dice are there, but not showing a result. */
+.board__dice--idle { opacity: 0.5; }
+/* Holds the log, and is the containing block for the drawn-card popup that covers it. */
+.board__lower {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  max-height: 46%;
+  min-height: calc(7rem * var(--tile-scale, 1));
+  display: flex;
+  flex-direction: column;
+}
 .die {
   --die-size: calc(4.2rem * var(--tile-scale, 1));
   width: var(--die-size);
@@ -658,8 +670,8 @@ button, input, select {
 /* Only the last handful of entries, centred and large enough to read across the table.
    The stage above it takes the rest of the height, so the log never grows the board. */
 .board__center-inner .event-log {
-  flex: 0 0 auto;
-  max-height: 46%;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   padding: calc(0.6rem * var(--tile-scale, 1));
   background: rgba(255,255,255,0.03);
