@@ -52,6 +52,7 @@ export function Home() {
       <footer className="home__credits">
         Flags by <a href="https://github.com/HatScripts/circle-flags" target="_blank" rel="noreferrer">circle-flags</a> (MIT)
         {' · '}Fonts: Nunito, Nunito Sans, Comfortaa (SIL OFL)
+        {' · '}Icons from <a href="https://www.svgrepo.com" target="_blank" rel="noreferrer">SVG Repo</a>, by their authors (see Licences)
         {' · '}<a href="/THIRD_PARTY_NOTICES.txt" target="_blank" rel="noreferrer">Licences</a>
       </footer>
     </div>

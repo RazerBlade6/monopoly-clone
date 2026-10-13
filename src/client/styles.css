@@ -477,6 +477,12 @@ button, input, select {
 /* Circle-flags SVGs are drawn as discs on a square canvas, so filling the badge's box is
    all it takes, at any size. */
 .flag-img { display: block; width: 100%; height: 100%; user-select: none; }
+/* Tile icons stand in for emoji, so they size the way a glyph did: one em square, from
+   whatever font size their container already sets. */
+.icon-img { display: block; width: 1em; height: 1em; object-fit: contain; user-select: none; }
+/* Black-on-transparent art would vanish on a dark tile. Inverting turns it light, and the
+   half-turn of hue puts any colour accents (earnings tax's teal) back near where they were. */
+.icon-img--dark { filter: invert(1) hue-rotate(180deg); }
 .tile--o-bottom .tile__flag { top: 0; left: 50%; transform: translate(-50%, -50%); }
 .tile--o-top .tile__flag { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
 .tile--o-left .tile__flag { right: 0; top: 50%; transform: translate(50%, -50%); }
@@ -502,7 +508,7 @@ button, input, select {
 /* Houses used to float in the tile's corner, where they landed on top of the flag badge.
    They sit in the text block under the price — a picture like the badge, so they opt
    out of the vertical writing mode and undo the left run's 180deg. */
-.tile__buildings { font-size: 10cqmin; line-height: 1; letter-spacing: -0.2em; }
+.tile__buildings { font-size: 12cqmin; line-height: 1; display: flex; justify-content: center; gap: 1cqmin; }
 .tile--o-left .tile__buildings, .tile--o-right .tile__buildings { writing-mode: horizontal-tb; }
 .tile--o-left .tile__buildings { transform: rotate(180deg); }
 /* Tokens live in their own full-grid overlay (`.board__tokens-layer`, placed
