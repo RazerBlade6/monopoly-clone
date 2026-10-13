@@ -26,6 +26,7 @@ const TILE_ACTION_TYPES = new Set<GameAction['type']>([
   'sell_house',
   'buy_hotel',
   'sell_hotel',
+  'sell_property',
 ]);
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

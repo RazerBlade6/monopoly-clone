@@ -4,7 +4,7 @@
  * value. This is the only place that reaches into the board shape, so no
  * other module should assume tile counts, group sizes, or indices.
  */
-import type { GameMap, GameState, Ownership, Player, PlayerId, Tile } from '../shared/types';
+import type { GameMap, GameState, OwnableTile, Ownership, Player, PlayerId, Tile } from '../shared/types';
 
 // ─── Immutable update helpers ─────────────────────────────────────────────
 
@@ -105,6 +105,19 @@ export function ownsWholeGroup(map: GameMap, state: GameState, playerId: PlayerI
   });
 }
 
+/** True if any city in the country has a house or hotel, whoever owns it. */
+export function groupHasBuildings(map: GameMap, state: GameState, countryId: string): boolean {
+  return groupTiles(map, countryId).some((t) => {
+    const o = state.tiles[t.index]!;
+    return o.hotel || o.houses > 0;
+  });
+}
+
+/** `united-kingdom` → `United Kingdom`, for messages. */
+export function countryName(countryId: string): string {
+  return countryId.split('-').map((w) => (w[0] ?? '').toUpperCase() + w.slice(1)).join(' ');
+}
+
 /** Building level on a tile: 0-4 houses, or 5 for a hotel. */
 export function buildingLevel(ownership: Ownership): number {
   return ownership.hotel ? 5 : ownership.houses;
@@ -141,6 +154,11 @@ export function houseSaleValue(tile: Extract<Tile, { type: 'city' }>): number {
 
 export function hotelSaleValue(tile: Extract<Tile, { type: 'city' }>): number {
   return Math.floor(tile.hotelPrice / 2);
+}
+
+/** What the bank pays for a property sold back to it: half the printed price, rounded down. */
+export function propertySaleValue(tile: OwnableTile): number {
+  return Math.floor(tile.price / 2);
 }
 
 /** Advance one tile at a time, returning the resulting index and whether START was passed or landed on. */

@@ -7,7 +7,7 @@
 import type { GameEvent, GameMap, GameState, PlayerId, Trade, TradeSide } from '../shared/types';
 import { payDebtFromIncome, totalOwed } from './debt';
 import { ok, reject, type ActionResult } from './result';
-import { groupTiles, updatePlayer, updateTile } from './state';
+import { groupHasBuildings, updatePlayer, updateTile } from './state';
 
 /** Proposals one player may send another per turn before they have to wait. */
 export const TRADE_SEND_LIMIT = 3;
@@ -44,12 +44,8 @@ function sideError(map: GameMap, state: GameState, ownerId: PlayerId, side: Trad
     if (!isNonNegativeInt(index) || !tile) return 'No such property';
     if (tile.type !== 'city' && tile.type !== 'airport' && tile.type !== 'company') return `${tile.name} can't be traded`;
     if (state.tiles[index]!.owner !== ownerId) return `${name} doesn't own ${tile.name}`;
-    if (tile.type === 'city') {
-      const built = groupTiles(map, tile.countryId).some((t) => {
-        const o = state.tiles[t.index]!;
-        return o.hotel || o.houses > 0;
-      });
-      if (built) return `${tile.name} can't be traded while its country has buildings. Sell them first.`;
+    if (tile.type === 'city' && groupHasBuildings(map, state, tile.countryId)) {
+      return `${tile.name} can't be traded while its country has buildings. Sell them first.`;
     }
   }
   return null;

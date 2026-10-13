@@ -49,6 +49,8 @@ function formatEvent(
       return `${nameOf(players, event.playerId)} bought tile ${event.tileIndex} for $${event.price}.`;
     case 'built':
       return `${nameOf(players, event.playerId)} built on tile ${event.tileIndex} (${event.hotel ? 'hotel' : `${event.houses} house(s)`}).`;
+    case 'property_sold':
+      return `${nameOf(players, event.playerId)} sold ${map?.tiles[event.tileIndex]?.name ?? `tile ${event.tileIndex}`} to the bank for $${event.amount}.`;
     case 'card_drawn': {
       const card = getCardSafe(event.cardId);
       return card

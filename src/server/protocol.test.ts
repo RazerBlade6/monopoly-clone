@@ -88,3 +88,23 @@ describe('trade action validation', () => {
     expect(parseClientMessage({ type: 'update_settings', settings: { antiCollusion: 'yes' } })).toBeNull();
   });
 });
+
+describe('sell_property validation', () => {
+  const action = (a: Record<string, unknown>) => parseClientMessage({ type: 'action', action: a });
+
+  it('accepts a tile index', () => {
+    expect(action({ type: 'sell_property', tileIndex: 0 })).toEqual({ type: 'action', action: { type: 'sell_property', tileIndex: 0 } });
+    expect(parseClientMessage({ type: 'action', asPlayerId: 'bot', action: { type: 'sell_property', tileIndex: 12 } })).not.toBeNull();
+  });
+
+  it('rejects a missing, malformed or padded tile index', () => {
+    const bad: Record<string, unknown>[] = [
+      { type: 'sell_property' },
+      { type: 'sell_property', tileIndex: -1 },
+      { type: 'sell_property', tileIndex: 1.5 },
+      { type: 'sell_property', tileIndex: '3' },
+      { type: 'sell_property', tileIndex: 3, amount: 1000 },
+    ];
+    for (const a of bad) expect(action(a)).toBeNull();
+  });
+});

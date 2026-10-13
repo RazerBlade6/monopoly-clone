@@ -18,7 +18,7 @@ by default, so a default v1 game is rule-complete). The engine **rejects** actio
 | # | Decision |
 |---|---|
 | 1–3 | **Rent auto-collects** inside landing resolution. No claim window, no forfeiture, no decline. |
-| 4 | **`RESOLVING_DEBT` is an explicit blocking phase.** Nobody rolls and the debtor can't end their turn until it clears. The debtor may sell buildings, trade, or declare bankruptcy; everyone else may still trade, with the debtor included. |
+| 4 | **`RESOLVING_DEBT` is an explicit blocking phase.** Nobody rolls and the debtor can't end their turn until it clears. The debtor may sell buildings or properties, trade, or declare bankruptcy; everyone else may still trade, with the debtor included. |
 | 5 | **No auto-bankruptcy.** A debtor who can't raise the money declares bankruptcy themselves (`declare_bankruptcy`). It is the same action as a voluntary concession and runs the same settlement routine. |
 | 6 | **No rollback.** Building sales and trades made during `RESOLVING_DEBT` stand. Every dollar the debtor receives goes straight to the creditor(s) as it arrives. |
 | 12 | **Asset mutation is gated.** Buying/selling buildings is legal only on your own turn in `AWAITING_ROLL`, `AWAITING_END_TURN`, or when you are the debtor in `RESOLVING_DEBT`. Never between a roll and its resolution. |
@@ -104,6 +104,11 @@ the fee and moves. Rent is still collected while in jail unless `noRentInPrison`
   the group, and removed from the tile with the most.
 - Houses go 0→4, then a hotel replaces 4 houses.
 - Selling returns **half** the purchase price.
+- A **property** (city, airport or company) can be sold back to the bank for half its printed
+  price, rounded down (`sell_property`), with the same timing as building sales (decision 12).
+  A city can only be sold while no city in its country has a house or hotel. The tile becomes
+  unowned, the cash comes from the bank (never the Vacation pot), a debtor's proceeds go
+  straight to their creditors, and pending trades listing the tile are dropped.
 - Group sizes are **2, 3, 4, 5 or 6** depending on map — read `map.countrySizes`, never assume 3.
   (Verified from the data: Death Valley is four groups of 5, 6, 6, 5.)
 

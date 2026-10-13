@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { GameAction, GameMap, GameState, PlayerId } from '../../shared/types';
+import type { GameAction, GameState, PlayerId } from '../../shared/types';
 
 /**
  * Shows the buttons that make sense for the current phase. This is UI
@@ -12,9 +12,8 @@ import type { GameAction, GameMap, GameState, PlayerId } from '../../shared/type
  * after the phase-specific branches, instead of being threaded into each.
  */
 export function ActionBar({
-  map, state, myPlayerId, actingPlayerId, onAction,
+  state, myPlayerId, actingPlayerId, onAction,
 }: {
-  map: GameMap;
   state: GameState;
   /** This browser's own seat — used only to label a turn taken on a dummy's behalf. */
   myPlayerId: PlayerId;
@@ -46,15 +45,12 @@ export function ActionBar({
     phaseContent = debt.debtor !== actingPlayerId
       ? <p className="action-bar__waiting">Waiting for {nameOf(debt.debtor)} to settle a debt…</p>
       : (
-        <>
-          <p className="action-bar__debt">
-            {debt.queued.length === 0
-              ? <>You owe ${debt.amount} to {nameOf(debt.creditor)}.</>
-              : <>You owe ${total} in total, ${debt.amount} of it to {nameOf(debt.creditor)} first.</>}
-            {' '}Sell buildings or trade to raise money, or declare bankruptcy.
-          </p>
-          <BuildingControls map={map} state={state} myPlayerId={actingPlayerId} onAction={onAction} sellOnly />
-        </>
+        <p className="action-bar__debt">
+          {debt.queued.length === 0
+            ? <>You owe ${debt.amount} to {nameOf(debt.creditor)}.</>
+            : <>You owe ${total} in total, ${debt.amount} of it to {nameOf(debt.creditor)} first.</>}
+          {' '}Sell buildings or properties from your property list, trade, or declare bankruptcy.
+        </p>
       );
   } else if (!isMyTurn) {
     const currentName = state.players.find(p => p.id === currentPlayerId)?.name ?? '…';
@@ -82,9 +78,6 @@ export function ActionBar({
             <button className="btn btn--primary" onClick={() => onAction({ type: 'buy' })}>Buy</button>
             <button className="btn" onClick={() => onAction({ type: 'decline_buy' })}>Decline</button>
           </>
-        )}
-        {(state.phase === 'AWAITING_ROLL' || state.phase === 'AWAITING_END_TURN') && (
-          <BuildingControls map={map} state={state} myPlayerId={actingPlayerId} onAction={onAction} />
         )}
         {state.phase === 'AWAITING_END_TURN' && (
           <button className="btn btn--primary" onClick={() => onAction({ type: 'end_turn' })}>End turn</button>
@@ -127,59 +120,5 @@ function BankruptButton({ onAction }: { onAction: (action: GameAction) => void }
     >
       {confirming ? 'Sure? Your properties return to the market' : 'Bankrupt'}
     </button>
-  );
-}
-
-function BuildingControls({
-  map, state, myPlayerId, onAction, sellOnly = false,
-}: {
-  map: GameMap;
-  state: GameState;
-  myPlayerId: PlayerId;
-  onAction: (action: GameAction) => void;
-  /** In debt only selling is allowed, so only cities with something to sell are listed. */
-  sellOnly?: boolean;
-}) {
-  const myCities = map.tiles.filter((tile, i) => {
-    const o = state.tiles[i];
-    return tile.type === 'city' && o?.owner === myPlayerId && (!sellOnly || o.hotel || o.houses > 0);
-  });
-  if (myCities.length === 0) return null;
-
-  return (
-    <div className="building-controls">
-      {myCities.map((tile) => {
-        const ownership = state.tiles[tile.index];
-        if (!ownership || tile.type !== 'city') return null;
-        return (
-          <div key={tile.index} className="building-controls__row">
-            <span className="building-controls__name">{tile.name}</span>
-            {ownership.hotel ? (
-              <button className="btn btn--small" onClick={() => onAction({ type: 'sell_hotel', tileIndex: tile.index })}>
-                Sell hotel
-              </button>
-            ) : (
-              <>
-                {!sellOnly && (
-                  <button className="btn btn--small" onClick={() => onAction({ type: 'buy_house', tileIndex: tile.index })}>
-                    +House
-                  </button>
-                )}
-                {ownership.houses > 0 && (
-                  <button className="btn btn--small" onClick={() => onAction({ type: 'sell_house', tileIndex: tile.index })}>
-                    -House
-                  </button>
-                )}
-                {!sellOnly && ownership.houses === 4 && (
-                  <button className="btn btn--small" onClick={() => onAction({ type: 'buy_hotel', tileIndex: tile.index })}>
-                    +Hotel
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
   );
 }

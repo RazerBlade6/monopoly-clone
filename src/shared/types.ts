@@ -245,6 +245,7 @@ export type GameAction =
   | { type: 'sell_house'; tileIndex: number }
   | { type: 'buy_hotel'; tileIndex: number }
   | { type: 'sell_hotel'; tileIndex: number }
+  | { type: 'sell_property'; tileIndex: number }
   | { type: 'pay_jail_fee' }
   | { type: 'use_pardon' }
   | { type: 'end_turn' }
@@ -269,6 +270,7 @@ export type GameEvent =
   | { type: 'paid'; from: PlayerId | null; to: PlayerId | null; amount: number; reason: string }
   | { type: 'bought'; playerId: PlayerId; tileIndex: number; price: number }
   | { type: 'built'; playerId: PlayerId; tileIndex: number; houses: number; hotel: boolean }
+  | { type: 'property_sold'; playerId: PlayerId; tileIndex: number; amount: number }
   | { type: 'card_drawn'; playerId: PlayerId; deck: DeckId; cardId: string }
   | { type: 'jailed'; playerId: PlayerId; reason: 'tile' | 'card' | 'doubles' }
   | { type: 'left_jail'; playerId: PlayerId; how: 'fee' | 'pardon' | 'doubles' | 'served' }

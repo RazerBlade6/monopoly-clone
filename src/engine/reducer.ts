@@ -3,7 +3,8 @@ import { buyHotel, buyHouse, sellHotel, sellHouse } from './buildings';
 import { advanceTurn, openDebt, payDebtFromIncome, phaseAfterLanding, settleBankruptcy } from './debt';
 import { moveForwardAndResolve, sendToJail, freshDeckOrder } from './landing';
 import { rollDice, shuffle } from './rng';
-import { acceptTrade, cancelTrade, declineTrade, proposeTrade } from './trades';
+import { sellProperty } from './propertySale';
+import { acceptTrade, cancelTrade, declineTrade, dropInvalidTrades, proposeTrade } from './trades';
 import { ok, reject, type ActionResult } from './result';
 import { addToVacationPot, currentPlayer, getPlayer, updatePlayer, updateTile } from './state';
 
@@ -229,6 +230,15 @@ function dispatch(map: GameMap, state: GameState, playerId: PlayerId, action: Ga
         return reject(state, 'Cannot sell right now');
       }
       return afterSale(sellHotel(map, state, playerId, action.tileIndex));
+    }
+    case 'sell_property': {
+      if (!canMutateAssetsNormally(state, playerId) && !canSellDuringDebt(state, playerId)) {
+        return reject(state, 'Cannot sell right now');
+      }
+      const sold = afterSale(sellProperty(map, state, playerId, action.tileIndex));
+      if (sold.error) return sold;
+      // Pending trades that list this tile can no longer go through.
+      return dropInvalidTrades(map, sold.state, sold.events);
     }
     case 'pay_jail_fee':
       return handlePayJailFee(state, playerId);

@@ -1,5 +1,6 @@
 import type { GameAction, GameMap, GameState, PlayerId } from '../shared/types';
 import { buyHotel, buyHouse, sellHotel, sellHouse } from './buildings';
+import { sellProperty } from './propertySale';
 import { currentPlayer, ownableTileIndices } from './state';
 import { canAcceptTrade } from './trades';
 
@@ -54,6 +55,7 @@ export function legalActions(map: GameMap, state: GameState, playerId: PlayerId)
       if (canBuild || canSellForDebt) {
         if (!sellHouse(map, state, playerId, index).error) actions.push({ type: 'sell_house', tileIndex: index });
         if (!sellHotel(map, state, playerId, index).error) actions.push({ type: 'sell_hotel', tileIndex: index });
+        if (!sellProperty(map, state, playerId, index).error) actions.push({ type: 'sell_property', tileIndex: index });
       }
     }
   }
