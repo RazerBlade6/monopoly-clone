@@ -22,6 +22,13 @@ function totalCash(state: GameState): number {
   return state.players.reduce((sum, p) => sum + p.cash, 0);
 }
 
+/** A debtor's balance is negative by what they still owe, so that has to be added back for
+ * player cash to balance against the bank's payouts. */
+function outstandingDebt(state: GameState): number {
+  const debt = state.debt;
+  return debt ? debt.amount + debt.queued.reduce((sum, q) => sum + q.amount, 0) : 0;
+}
+
 function totalBuildings(state: GameState): { houses: number; hotels: number } {
   let houses = 0;
   let hotels = 0;
@@ -37,6 +44,11 @@ function totalBuildings(state: GameState): { houses: number; hotels: number } {
 function chooseAction(map: typeof SMALL_MAP, state: GameState, playerId: string): GameAction {
   const legal = legalActions(map, state, playerId);
   const prefer = (type: GameAction['type']) => legal.find((a) => a.type === type);
+  // Nothing goes bankrupt automatically any more: a debtor sells what they can and then
+  // concedes, or the game would wait on them forever.
+  if (state.phase === 'RESOLVING_DEBT') {
+    return prefer('sell_house') ?? prefer('sell_hotel') ?? prefer('declare_bankruptcy')!;
+  }
   return (
     prefer('buy') ??
     prefer('buy_house') ??
@@ -90,13 +102,16 @@ function playFullGame(seed: number) {
 
     // Invariants that must hold at every single step.
     for (const p of state.players) {
-      if (state.phase !== 'RESOLVING_DEBT') {
-        expect(p.cash, `player ${p.id} has negative cash outside RESOLVING_DEBT`).toBeGreaterThanOrEqual(0);
+      if (state.debt?.debtor === p.id) {
+        expect(p.cash, `debtor ${p.id} must be negative by exactly what they owe`).toBe(-outstandingDebt(state));
+      } else {
+        expect(p.cash, `player ${p.id} has negative cash without being in debt`).toBeGreaterThanOrEqual(0);
       }
     }
-    expect(totalCash(state), 'total player cash must equal starting cash plus net Bank payouts').toBe(
-      startingTotalCash + bankNetPaidToPlayers,
-    );
+    expect(
+      totalCash(state) + outstandingDebt(state),
+      'total player cash plus outstanding debt must equal starting cash plus net Bank payouts',
+    ).toBe(startingTotalCash + bankNetPaidToPlayers);
     const built = totalBuildings(state);
     expect(built.houses).toBeGreaterThanOrEqual(0);
     expect(built.hotels).toBeGreaterThanOrEqual(0);
@@ -111,13 +126,15 @@ function playFullGame(seed: number) {
 
 describe('scripted full game', () => {
   it('plays from createGame to game_over with a seeded rng, producing a winner with no invariant broken', () => {
-    // This fixture's action policy rarely bankrupts anyone on this board once it's fully built
-    // out, regardless of ruleset (a 60-seed scan converged on ~1/3 of seeds both before and after
-    // issues 5/9's rule changes — a liveness quirk of this seed/policy pairing, not a broken
-    // invariant; every invariant below is still checked at every step). Seed 20260821 happened to
-    // converge under the old rules and no longer does; 57 was picked from the same scan because it
-    // reliably reaches GAME_OVER well inside the step cap under the current rules.
-    const { state, steps, startingTotalCash } = playFullGame(57);
+    // This fixture's action policy rarely bankrupts anyone on this board once every property
+    // is bought, regardless of ruleset: a game where nobody completes a group just accumulates
+    // cash forever. That is a liveness quirk of the seed/policy pairing, not a broken invariant;
+    // every invariant below is still checked at every step. Seed 57 converged while bankruptcy
+    // handed deeds to the creditor (which tends to complete a group); now that they return to
+    // the market it stalls after one bankruptcy. A 60-seed scan under the current rules found
+    // 15 that converge, with invariants holding on all 60; 38 was picked because it finishes
+    // quickly and opens four debts on the way, so the negative-balance path is exercised.
+    const { state, steps, startingTotalCash } = playFullGame(38);
 
     expect(state.phase).toBe('GAME_OVER');
     expect(state.winner).not.toBeNull();

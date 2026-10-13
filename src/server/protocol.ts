@@ -26,6 +26,7 @@ const TILE_ACTION_TYPES = new Set<GameAction['type']>([
   'sell_house',
   'buy_hotel',
   'sell_hotel',
+  'sell_property',
 ]);
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -34,6 +35,30 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 function extraKeys(obj: Record<string, unknown>, allowed: readonly string[]): boolean {
   return Object.keys(obj).some((k) => !allowed.includes(k));
+}
+
+/** The largest board is 48 tiles; anything longer than that is junk, not a trade. */
+const MAX_TRADE_TILES = 64;
+const MAX_ID_LENGTH = 64;
+
+function isNonNegativeInt(v: unknown): v is number {
+  return typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+}
+
+function isId(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0 && v.length <= MAX_ID_LENGTH;
+}
+
+function isValidTradeSide(side: unknown): boolean {
+  return (
+    isPlainObject(side) &&
+    !extraKeys(side, ['cash', 'tiles', 'pardonCards']) &&
+    isNonNegativeInt(side.cash) &&
+    isNonNegativeInt(side.pardonCards) &&
+    Array.isArray(side.tiles) &&
+    side.tiles.length <= MAX_TRADE_TILES &&
+    side.tiles.every(isNonNegativeInt)
+  );
 }
 
 function isValidGameAction(action: unknown): action is GameAction {
@@ -53,14 +78,39 @@ function isValidGameAction(action: unknown): action is GameAction {
     );
   }
 
+  if (type === 'propose_trade') {
+    return (
+      !extraKeys(action, ['type', 'to', 'offer', 'request', 'counterOf']) &&
+      isId(action.to) &&
+      isValidTradeSide(action.offer) &&
+      isValidTradeSide(action.request) &&
+      (action.counterOf === undefined || isId(action.counterOf))
+    );
+  }
+
+  if (type === 'accept_trade' || type === 'decline_trade' || type === 'cancel_trade') {
+    return !extraKeys(action, ['type', 'tradeId']) && isId(action.tradeId);
+  }
+
   return false;
+}
+
+/** Canonical form for comparing player names: trimmed and case-folded. */
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** True if `name` collides with any of `existing` once trimmed and case-folded. */
+export function isNameTaken(name: string, existing: readonly string[]): boolean {
+  const wanted = normalizeName(name);
+  return existing.some((n) => normalizeName(n) === wanted);
 }
 
 /** Whitelist of settings keys and a type check for each. Unknown keys are rejected. */
 const SETTINGS_VALIDATORS: { [K in keyof RoomSettings]: (v: unknown) => boolean } = {
   mapId: (v) => typeof v === 'string' && MAP_IDS.includes(v as MapId),
-  startingCash: (v) => typeof v === 'number' && Number.isFinite(v),
-  maxPlayers: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 2,
+  startingCash: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+  maxPlayers: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 2 && v <= 8,
   doubleRentOnFullSet: (v) => typeof v === 'boolean',
   auction: (v) => typeof v === 'boolean',
   mortgage: (v) => typeof v === 'boolean',
@@ -68,11 +118,12 @@ const SETTINGS_VALIDATORS: { [K in keyof RoomSettings]: (v: unknown) => boolean 
   randomizePlayerOrder: (v) => typeof v === 'boolean',
   vacationCash: (v) => typeof v === 'boolean',
   noRentInPrison: (v) => typeof v === 'boolean',
-  startSalary: (v) => typeof v === 'number' && Number.isFinite(v),
-  landOnStartBonus: (v) => typeof v === 'number' && Number.isFinite(v),
-  jailFee: (v) => typeof v === 'number' && Number.isFinite(v),
+  startSalary: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+  landOnStartBonus: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+  jailFee: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
   companyRentMultipliers: (v) => Array.isArray(v) && v.every((n) => typeof n === 'number'),
   unlimitedBuildings: (v) => typeof v === 'boolean',
+  antiCollusion: (v) => typeof v === 'boolean',
 };
 
 function isValidSettingsPatch(patch: unknown): patch is Partial<RoomSettings> {

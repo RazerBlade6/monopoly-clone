@@ -1,7 +1,14 @@
 import type { GameAction, GameMap, GameState, PlayerId } from '../shared/types';
 import { buyHotel, buyHouse, sellHotel, sellHouse } from './buildings';
+import { sellProperty } from './propertySale';
 import { currentPlayer, ownableTileIndices } from './state';
+import { canAcceptTrade } from './trades';
 
+/**
+ * Every concrete action `playerId` could take right now. `propose_trade` is the one action
+ * not listed: its space of offers is effectively unbounded, so it is validated on arrival
+ * instead. Answering or withdrawing a pending trade is listed.
+ */
 export function legalActions(map: GameMap, state: GameState, playerId: PlayerId): GameAction[] {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return [];
@@ -48,11 +55,21 @@ export function legalActions(map: GameMap, state: GameState, playerId: PlayerId)
       if (canBuild || canSellForDebt) {
         if (!sellHouse(map, state, playerId, index).error) actions.push({ type: 'sell_house', tileIndex: index });
         if (!sellHotel(map, state, playerId, index).error) actions.push({ type: 'sell_hotel', tileIndex: index });
+        if (!sellProperty(map, state, playerId, index).error) actions.push({ type: 'sell_property', tileIndex: index });
       }
     }
   }
 
-  if (!player.bankrupt) actions.push({ type: 'declare_bankruptcy' });
+  if (!player.bankrupt) {
+    for (const trade of state.trades) {
+      if (trade.to === playerId) {
+        if (canAcceptTrade(map, state, trade)) actions.push({ type: 'accept_trade', tradeId: trade.id });
+        actions.push({ type: 'decline_trade', tradeId: trade.id });
+      }
+      if (trade.from === playerId) actions.push({ type: 'cancel_trade', tradeId: trade.id });
+    }
+    actions.push({ type: 'declare_bankruptcy' });
+  }
 
   return actions;
 }

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameEvent, GameMap, GameState, Player, Tile } from '../../shared/types';
 import { CORNER_TRACK_RATIO, ringLayout, trackSpan, type Edge, type GridPos } from '../ringLayout';
 import { countryTint } from '../colors';
-import { countryFlag, tileIcon, tileSubLabel } from '../tileArt';
+import { tileSubLabel } from '../tileArt';
+import { FlagImage, Icon, TileIcon } from './TileBadge';
 import { EventLog, getCardSafe } from './EventLog';
 
 function formatPhase(phase: GameState['phase']): string {
@@ -203,20 +204,23 @@ function useWalkedTile(target: number, tileCount: number): number {
 }
 
 /**
- * Shifts a token toward the outer rim of the board, where a tile keeps its flag or icon.
- * The name and price sit at the inner edge, so the token covers the badge instead of the
- * words — a tile has to stay readable while it is occupied. Corners are square and roomy
- * enough not to need it.
+ * Stands a token on the tile's badge at the inner edge — the flag that sits on the border,
+ * or a non-city tile's icon just inside it. The badge is the one part of a tile that can be
+ * covered without losing anything: the name sits right beside it and stays readable, the
+ * owner's slab on the outer rim stays in view, and the tile's tint still says the country.
+ * A token is wider than the flag, so it is centred a little past the border, over the
+ * board's middle; centred on the tile side it would reach across into the name.
+ * Corners are square and roomy enough not to need it.
  */
 function badgeNudge(pos: GridPos): readonly [number, number] {
   // A corner reads upright and stacks its name above its icon, so the token drops onto
   // the icon rather than sitting dead centre across the name.
   if (pos.isCorner) return [0, 0.18];
   switch (pos.edge) {
-    case 'bottom': return [0, 0.28];
-    case 'top': return [0, -0.28];
-    case 'left': return [-0.28, 0];
-    default: return [0.28, 0];
+    case 'bottom': return [0, -0.56];
+    case 'top': return [0, 0.56];
+    case 'left': return [0.56, 0];
+    default: return [-0.56, 0];
   }
 }
 
@@ -289,13 +293,23 @@ function TokenLayer({
   );
 }
 
+/** A property tile was clicked: its viewport rect, and the board's middle (inside the ring). */
+export type TileClickHandler = (tileIndex: number, rect: DOMRect, middle: DOMRect) => void;
+
 export function Board({
-  map, state, events = [],
+  map, state, events = [], onTileClick,
 }: {
   map: GameMap;
   state: GameState;
   events?: readonly GameEvent[];
+  /** Absent where the board is scenery (the lobby) and nothing on it should respond. */
+  onTileClick?: TileClickHandler;
 }) {
+  const middleRef = useRef<HTMLDivElement>(null);
+  const clickTile = onTileClick && ((tileIndex: number, el: HTMLElement) => {
+    const middle = middleRef.current;
+    if (middle) onTileClick(tileIndex, el.getBoundingClientRect(), middle.getBoundingClientRect());
+  });
   const { side, positions, tracks } = ringLayout(map.tiles.length);
   const template = tracks.map(t => `${t}fr`).join(' ');
   const units = tracks.reduce((a, b) => a + b, 0);
@@ -328,6 +342,7 @@ export function Board({
             owner={ownership ? ownerOf(state.players, ownership.owner) : null}
             houses={ownership?.houses ?? 0}
             hotel={ownership?.hotel ?? false}
+            onClick={clickTile && isProperty(tile) ? el => clickTile(i, el) : undefined}
           />
         );
       })}
@@ -337,12 +352,12 @@ export function Board({
         players={state.players}
         currentPlayerId={state.turnOrder[state.currentPlayerIndex]}
       />
-      <div className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
+      <div ref={middleRef} className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
         <div className="board__center-inner">
           {/* The dice sit centred in the space above the log rather than pinned to the
-              top edge. The popup stays a sibling of the stage, not a child: it is
-              `inset: 0` against `board__center-inner`, and inside the stage it would
-              shrink to the dice. */}
+              top edge. The card popup lives inside the stage (`position: relative`) so it
+              covers just that area and leaves the log readable; being absolutely
+              positioned with `inset: 0`, it fills the stage rather than shrinking to the dice. */}
           <div className="board__stage">
             {state.lastRoll && (
               <div className="board__dice">
@@ -354,27 +369,31 @@ export function Board({
             {state.vacationPot > 0 && (
               <div className="board__vacation-pot">Vacation pot: ${state.vacationPot}</div>
             )}
+            {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
           </div>
-          <EventLog events={events} players={state.players} limit={6} />
-          {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
+          <EventLog events={events} players={state.players} map={map} limit={6} />
         </div>
       </div>
     </div>
   );
 }
 
+function isProperty(tile: Tile): boolean {
+  return tile.type === 'city' || tile.type === 'airport' || tile.type === 'company';
+}
+
 function BoardTile({
-  tile, pos, owner, houses, hotel,
+  tile, pos, owner, houses, hotel, onClick,
 }: {
   tile: Tile;
   pos: { row: number; col: number; edge: Edge; isCorner: boolean };
   owner: Player | null;
   houses: number;
   hotel: boolean;
+  /** Present on properties, which open their deed card; the rest of the board is inert. */
+  onClick?: (el: HTMLElement) => void;
 }) {
   const { row, col, edge, isCorner } = pos;
-  // A city is identified by its tint and its flag badge, so it skips the generic icon.
-  const icon = tile.type === 'city' ? '' : tileIcon(tile);
   const sub = tileSubLabel(tile);
   // Corners read upright; the four runs read along their own edge, which is what
   // buys side tiles enough room for a full city name instead of an ellipsis.
@@ -382,26 +401,42 @@ function BoardTile({
 
   return (
     <div
-      className={`tile tile--${tile.type} tile--o-${orient}${isCorner ? ' tile--corner' : ''}`}
+      className={`tile tile--${tile.type} tile--o-${orient}${isCorner ? ' tile--corner' : ''}${onClick ? ' tile--clickable' : ''}`}
       style={{ gridRow: row, gridColumn: col, backgroundImage: tile.type === 'city' ? countryTint(tile.countryId) : undefined }}
       title={tile.name}
+      {...(onClick ? {
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': `${tile.name}, view card`,
+        onClick: (e: React.MouseEvent<HTMLDivElement>) => onClick(e.currentTarget),
+        onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(e.currentTarget);
+          }
+        },
+      } : {})}
     >
-      {/* Name and price at the inner edge, the flag or icon pushed to the outer rim with
-          the leftover depth between them. The token lands on that badge rather than on the
-          words, which is what keeps a tile readable while it is occupied. */}
+      {/* Inner edge to outer: the badge, then name and price, then the owner's slab on the
+          outer rim. A city's flag is not in this flow at all — it sits on the tile's inner
+          border, half over the board's middle (see `.tile__flag`), which leaves the whole
+          depth of the tile for the words. Other tiles keep their icon in the flow. */}
       <div className="tile__inner">
+        {tile.type !== 'city' && <div className="tile__icon"><TileIcon tile={tile} /></div>}
         <div className="tile__text">
           <div className="tile__name">{tile.name}</div>
           {sub && <div className="tile__sub">{sub}</div>}
           {'price' in tile && <div className="tile__price">${tile.price}</div>}
           {(houses > 0 || hotel) && (
-            <div className="tile__buildings">{hotel ? '🏨' : '🏠'.repeat(houses)}</div>
+            <div className="tile__buildings">
+              {hotel
+                ? <Icon name="hotel" />
+                : Array.from({ length: houses }, (_, n) => <Icon key={n} name="house" />)}
+            </div>
           )}
         </div>
-        {tile.type === 'city'
-          ? <div className="tile__flag">{countryFlag(tile.countryId)}</div>
-          : icon && <div className="tile__icon">{icon}</div>}
       </div>
+      {tile.type === 'city' && <div className="tile__flag"><FlagImage tile={tile} /></div>}
       {owner && <div className="tile__owner" style={{ background: owner.color }} title={owner.name} />}
     </div>
   );

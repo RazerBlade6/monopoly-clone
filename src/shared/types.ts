@@ -102,6 +102,11 @@ export interface RoomSettings {
   /** Dice multiplier by number of companies owned, index = count - 1. */
   companyRentMultipliers: readonly number[];
   unlimitedBuildings: boolean;
+  /**
+   * Off (richup's rule): a player in debt may only make trades that bring in more cash than
+   * they give. On: a debtor's trade must either clear the debt or not lose them value.
+   */
+  antiCollusion: boolean;
 }
 
 export const DEFAULT_SETTINGS: RoomSettings = {
@@ -120,6 +125,7 @@ export const DEFAULT_SETTINGS: RoomSettings = {
   jailFee: 50,
   companyRentMultipliers: [4, 10, 20],
   unlimitedBuildings: false,
+  antiCollusion: false,
 };
 
 // ─── Game state ──────────────────────────────────────────────────────────────
@@ -130,6 +136,10 @@ export interface Player {
   id: PlayerId;
   name: string;
   color: string;
+  /**
+   * Negative while this player is the debtor in RESOLVING_DEBT: everything they had was paid
+   * over when the charge landed, and the balance is minus what they still owe.
+   */
   cash: number;
   tileIndex: number;
   inJail: boolean;
@@ -179,6 +189,24 @@ export interface Debt {
   queued: readonly { amount: number; creditor: PlayerId | null }[];
 }
 
+export interface TradeSide {
+  cash: number;
+  tiles: readonly number[];
+  pardonCards: number;
+}
+
+export interface Trade {
+  id: string;
+  /** Proposer. */
+  from: PlayerId;
+  /** Recipient. */
+  to: PlayerId;
+  /** What `from` gives. */
+  offer: TradeSide;
+  /** What `to` gives. */
+  request: TradeSide;
+}
+
 export interface GameState {
   version: number;
   mapId: MapId;
@@ -198,6 +226,12 @@ export interface GameState {
   /** Cash pooled on the Vacation corner when `vacationCash` is on. */
   vacationPot: number;
   winner: PlayerId | null;
+  /** Pending trades only. */
+  trades: readonly Trade[];
+  /** Trades sent this turn per ordered pair, keyed `${from}>${to}`. */
+  tradeSendCounts: Readonly<Record<string, number>>;
+  /** Trade ids are `trade-${n}`, so they stay deterministic. */
+  nextTradeId: number;
 }
 
 // ─── Actions (client → engine) ───────────────────────────────────────────────
@@ -211,10 +245,15 @@ export type GameAction =
   | { type: 'sell_house'; tileIndex: number }
   | { type: 'buy_hotel'; tileIndex: number }
   | { type: 'sell_hotel'; tileIndex: number }
+  | { type: 'sell_property'; tileIndex: number }
   | { type: 'pay_jail_fee' }
   | { type: 'use_pardon' }
   | { type: 'end_turn' }
-  | { type: 'declare_bankruptcy' };
+  | { type: 'declare_bankruptcy' }
+  | { type: 'propose_trade'; to: PlayerId; offer: TradeSide; request: TradeSide; counterOf?: string }
+  | { type: 'accept_trade'; tradeId: string }
+  | { type: 'decline_trade'; tradeId: string }
+  | { type: 'cancel_trade'; tradeId: string };
 
 /** Every action carries who sent it; the engine never trusts the client for anything else. */
 export interface PlayerAction {
@@ -231,6 +270,7 @@ export type GameEvent =
   | { type: 'paid'; from: PlayerId | null; to: PlayerId | null; amount: number; reason: string }
   | { type: 'bought'; playerId: PlayerId; tileIndex: number; price: number }
   | { type: 'built'; playerId: PlayerId; tileIndex: number; houses: number; hotel: boolean }
+  | { type: 'property_sold'; playerId: PlayerId; tileIndex: number; amount: number }
   | { type: 'card_drawn'; playerId: PlayerId; deck: DeckId; cardId: string }
   | { type: 'jailed'; playerId: PlayerId; reason: 'tile' | 'card' | 'doubles' }
   | { type: 'left_jail'; playerId: PlayerId; how: 'fee' | 'pardon' | 'doubles' | 'served' }
@@ -239,7 +279,11 @@ export type GameEvent =
   | { type: 'bankrupt'; playerId: PlayerId; creditor: PlayerId | null }
   | { type: 'turn_skipped'; playerId: PlayerId }
   | { type: 'turn_ended'; nextPlayerId: PlayerId }
-  | { type: 'game_over'; winner: PlayerId };
+  | { type: 'game_over'; winner: PlayerId }
+  | { type: 'trade_proposed'; trade: Trade; counterOf?: string }
+  | { type: 'trade_accepted'; trade: Trade }
+  | { type: 'trade_declined'; tradeId: string; from: PlayerId; to: PlayerId }
+  | { type: 'trade_cancelled'; tradeId: string; reason: 'withdrawn' | 'invalid' | 'bankrupt' | 'countered' };
 
 // ─── Transport (client ↔ server) ─────────────────────────────────────────────
 

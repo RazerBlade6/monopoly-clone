@@ -2,20 +2,35 @@ import type { GameMap, GameState, Player } from '../../shared/types';
 import { countryColor } from '../colors';
 
 export function PlayerCard({
-  player, map, state, isCurrentTurn, isMe,
+  player, map, state, isCurrentTurn, isMe, selected, onSelect,
 }: {
   player: Player;
   map: GameMap;
   state: GameState;
   isCurrentTurn: boolean;
   isMe: boolean;
+  /** Whose properties the panel below is showing. */
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const owned = state.tiles
     .map((ownership, i) => ({ ownership, tile: map.tiles[i] }))
     .filter(({ ownership, tile }) => ownership.owner === player.id && tile);
 
   return (
-    <div className={`player-card${isCurrentTurn ? ' player-card--active' : ''}${player.bankrupt ? ' player-card--bankrupt' : ''}`}>
+    <div
+      className={`player-card${isCurrentTurn ? ' player-card--active' : ''}${player.bankrupt ? ' player-card--bankrupt' : ''}${selected ? ' player-card--selected' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={onSelect}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+    >
       <div className="player-card__avatar" style={{ background: player.color }}>
         {player.name.slice(0, 1).toUpperCase()}
       </div>
@@ -28,7 +43,9 @@ export function PlayerCard({
             {player.dummyOf && <span className="player-card__bot"> bot</span>}
             {!player.connected && <span className="player-card__offline"> offline</span>}
           </span>
-          <span className="player-card__cash">${player.cash}</span>
+          <span className={`player-card__cash${player.cash < 0 ? ' player-card__cash--negative' : ''}`}>
+            {player.cash < 0 ? `-$${-player.cash}` : `$${player.cash}`}
+          </span>
         </div>
         {player.inJail && <div className="player-card__jail">In prison (turn {player.jailTurns}/3)</div>}
         {owned.length > 0 && (

@@ -15,7 +15,12 @@
      so this is what "make the text bigger" turns. Tile faces are sized against the tile
      itself instead (see `container-type` on `.tile`) and do not follow it. */
   font-size: 17px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Nunito for everything, Comfortaa for the title, and a narrowed Nunito Sans for tile
+     names (see `.tile__name`). All three are bundled from fontsource in `main.tsx`. */
+  --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-title: "Comfortaa Variable", var(--font-system);
+  --font-tile: "Nunito Sans Variable", var(--font-system);
+  font-family: "Nunito Variable", var(--font-system);
 }
 
 * { box-sizing: border-box; }
@@ -86,6 +91,8 @@ button, input, select {
 .home {
   height: 100%;
   display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
@@ -99,31 +106,75 @@ button, input, select {
   max-width: 380px;
   text-align: center;
 }
-.home__title { margin: 0 0 0.4rem; font-size: 1.8rem; }
+.home__title { margin: 0 0 0.4rem; font-size: 1.8rem; font-family: var(--font-title); }
 .home__subtitle { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.95rem; }
 .home__error, .lobby__error { color: var(--danger); font-size: 0.9rem; margin-top: 0.6rem; }
 .home__divider { display: flex; align-items: center; color: var(--muted); margin: 1.5rem 0; font-size: 0.85rem; }
 .home__divider::before, .home__divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .home__divider span { padding: 0 0.75rem; }
 .home__join { display: flex; gap: 0.5rem; }
+.home__credits { color: var(--muted); font-size: 0.75rem; text-align: center; line-height: 1.5; }
+.home__credits a { color: inherit; }
 
 /* ─── Lobby ─────────────────────────────────────────────────────────── */
 
-.lobby { max-width: 720px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
-.lobby--join { max-width: 380px; height: 100%; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-.lobby--join form { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+/* The lobby is the game shell (`.game`) before the game starts: the chosen board sits
+   blurred in the middle column, and the join form or room settings float over it. */
+.lobby__board-wrap { position: relative; }
+.lobby__board {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  /* Scenery, not a control: dimmed and out of focus, and clicks fall through to nothing. */
+  filter: blur(7px) brightness(0.55) saturate(0.85);
+  pointer-events: none;
+  user-select: none;
+}
+.lobby__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
 .lobby__card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)), var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)), rgba(34, 27, 58, 0.92);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1.75rem;
+  width: 100%; max-width: 40rem; max-height: 100%; overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  display: flex; flex-direction: column; gap: 1.1rem;
+  animation: lobby-card-in 0.25s ease-out;
 }
-.lobby .brand { text-align: center; font-size: 2rem; padding-bottom: 0; }
-.lobby__share {
-  display: flex; align-items: center; gap: 0.75rem; background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem;
+@keyframes lobby-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
 }
-.lobby__share-url { flex: 1; overflow-x: auto; white-space: nowrap; font-family: ui-monospace, monospace; color: var(--muted); }
-.lobby__body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (prefers-reduced-motion: reduce) {
+  .lobby__card { animation: none; }
+}
+.lobby__heading { margin: 0; text-align: center; font-size: 1.35rem; }
+.lobby__join { display: flex; flex-direction: column; gap: 0.75rem; }
+/* Inside the card the settings carry no chrome of their own, and the two sections sit
+   side by side so the whole panel fits over the board without scrolling. */
+.lobby__card .settings-panel {
+  background: none; border: none; box-shadow: none; padding: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.75rem;
+}
+.lobby__card .settings-panel__note { grid-column: 1 / -1; margin: 0; text-align: center; }
+.lobby__footer { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.lobby__footer .lobby__waiting { margin: 0; font-size: 0.9rem; }
+.lobby .rail--right .player-list { padding: 0.85rem; }
+
+@media (max-width: 900px) {
+  /* Stacked, there is no board-sized space to float over, so the card takes the board's
+     place in the column instead. */
+  .lobby__board { display: none; }
+  .lobby__overlay { position: static; padding: 0; }
+  .lobby__card { max-height: none; }
+}
+@media (max-width: 640px) {
+  .lobby__card .settings-panel { grid-template-columns: 1fr; }
+}
 .lobby__waiting { color: var(--muted); text-align: center; }
 .lobby__dev {
   padding: 0.85rem; border-radius: var(--radius); background: var(--surface);
@@ -140,10 +191,6 @@ button, input, select {
 }
 .player-list__remove { margin-left: auto; }
 
-@media (max-width: 640px) {
-  .lobby__body { grid-template-columns: 1fr; }
-}
-
 .player-list, .settings-panel {
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)), var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem;
@@ -154,7 +201,9 @@ button, input, select {
 .rail .settings-panel {
   background: none; border: none; box-shadow: none; padding: 0;
 }
-.rail .settings-panel__title { display: none; }
+/* The panel is already titled "Game settings"; only the rules subheading shows. */
+.rail .settings-panel__title:not(.settings-panel__title--rules) { display: none; }
+.rail .settings-panel__title--rules { font-size: 0.75rem; letter-spacing: 0.08em; margin: 0.4rem 0 0.55rem; }
 .rail .settings-panel__field { font-size: 0.85rem; }
 .rail .settings-panel__toggle { font-size: 0.85rem; }
 .player-list__title, .settings-panel__title, .event-log__title { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -170,6 +219,7 @@ button, input, select {
 .settings-panel__field select, .settings-panel__field input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.4em 0.6em; color: var(--text); }
 .settings-panel__toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; }
 .settings-panel__note { color: var(--muted); font-size: 0.8rem; margin-top: 0.75rem; }
+.settings-panel__hint { color: var(--muted); font-size: 0.75rem; line-height: 1.35; margin: -0.25rem 0 0.6rem 1.6rem; }
 
 /* ─── Game layout ───────────────────────────────────────────────────── */
 
@@ -196,6 +246,7 @@ button, input, select {
   overflow-y: auto;
 }
 .brand {
+  font-family: var(--font-title);
   font-weight: 800;
   font-size: 1.7rem;
   line-height: 1.1;
@@ -248,6 +299,9 @@ button, input, select {
 @media (max-width: 900px) {
   .game { flex-direction: column; }
   .rail { width: 100%; max-height: none; overflow: visible; }
+  /* The stacked rail has no fixed height to fill, so the list gets its own cap instead. */
+  .properties-panel { flex: none; }
+  .properties-panel__list { flex: none; max-height: 40vh; }
 }
 
 /* ─── Board ─────────────────────────────────────────────────────────── */
@@ -281,11 +335,25 @@ button, input, select {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 4px;
-  overflow: hidden;
+  /* Visible, so a city's flag can straddle the tile's inner border (see `.tile__flag`).
+     Nothing else reaches the edge: the text box clips itself, and the tint is the tile's
+     own background, which `border-radius` rounds without any clipping. */
+  overflow: visible;
   min-width: 0;
   min-height: 0;
+  /* Above the board's middle, which the flags overhang. Each tile is its own stacking
+     context anyway (size containment), so this lifts the whole tile, flag included. */
+  z-index: 1;
 }
 .tile--corner { background: var(--surface); }
+/* Properties open their deed card. A lift and a brighter border say so on hover, and the
+   keyboard focus ring is the accent colour, since a tile is a button for keyboard users too. */
+.tile--clickable { cursor: pointer; transition: filter 0.12s ease, border-color 0.12s ease; }
+.tile--clickable:hover { filter: brightness(1.18); border-color: rgba(255,255,255,0.45); }
+.tile--clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 2; }
+@media (prefers-reduced-motion: reduce) {
+  .tile--clickable { transition: none; }
+}
 
 /* The inner box carries all the text. On the left and right runs it switches to
    vertical writing so a full city name fits instead of being clipped to "Glas…";
@@ -297,8 +365,9 @@ button, input, select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  justify-content: space-between;
+  /* Packed against the inner edge, badge first; the slack collects between the price
+     and the owner's slab on the outer rim. */
+  justify-content: flex-start;
   gap: 3cqmin;
   padding: 4cqmin;
   text-align: center;
@@ -312,9 +381,9 @@ button, input, select {
 .tile--o-left .tile__inner,
 .tile--o-right .tile__inner { writing-mode: vertical-rl; }
 .tile--o-left .tile__inner { transform: rotate(180deg); }
-/* Every run stacks inner-edge-first. In a vertical writing mode the block axis runs
-   right-to-left, and the left run is rotated 180deg on top of that, so both columns
-   need reversing to land the badge on the same edge the horizontal runs put it. */
+/* Every run stacks inner-edge-first, so `flex-start` is the inner edge on all four. In a
+   vertical writing mode the block axis runs right-to-left, and the left run is rotated
+   180deg on top of that, so both columns need reversing to match the horizontal runs. */
 .tile--o-top .tile__inner,
 .tile--o-left .tile__inner,
 .tile--o-right .tile__inner { flex-direction: column-reverse; }
@@ -329,8 +398,7 @@ button, input, select {
 .tile { --owner-bar: 24cqmin; }
 .tile--corner { --owner-bar: 0px; }
 
-/* Name and price ride together at the inner edge; `space-between` on the inner box drops
-   the flag or icon at the outer rim with the leftover depth between them. */
+/* Name and price ride together just outside the badge. */
 .tile__text {
   display: flex;
   flex-direction: column;
@@ -342,19 +410,34 @@ button, input, select {
      wrap against — content-sized, a long name would run off both ends instead. */
   align-self: stretch;
 }
-/* A corner has no owner bar and no run to read along, so its two lines just centre. */
+/* A corner has no owner bar and no run to read along, so its two lines just centre,
+   name above icon. */
 .tile--corner .tile__inner { justify-content: center; gap: 5cqmin; }
+.tile--corner .tile__icon { order: 1; }
 /* The slab is inset 2px from the tile edge, so the text has to clear its height *and*
    that inset — the 2px is absolute, not a share of the tile, or it stops covering on a
    dense board where 1cqmin is a fraction of a pixel. */
 .tile { --owner-clear: calc(var(--owner-bar) + 2px + 4cqmin); }
-.tile--o-bottom .tile__inner { padding-top: var(--owner-clear); }
-.tile--o-top .tile__inner { padding-bottom: var(--owner-clear); }
+.tile--o-bottom .tile__inner { padding-bottom: var(--owner-clear); }
+.tile--o-top .tile__inner { padding-top: var(--owner-clear); }
 .tile--o-left .tile__inner,
-.tile--o-right .tile__inner { padding-left: var(--owner-clear); }
+.tile--o-right .tile__inner { padding-right: var(--owner-clear); }
+/* A city's flag overhangs the inner edge by half, so its name starts below the other half.
+   Same physical-side caveat as above: the left run's 180deg makes its inner edge `left`. */
+.tile { --flag: 40cqmin; --flag-clear: calc(var(--flag) / 2 + 3cqmin); }
+.tile--city.tile--o-bottom .tile__inner { padding-top: var(--flag-clear); }
+.tile--city.tile--o-top .tile__inner { padding-bottom: var(--flag-clear); }
+.tile--city.tile--o-left .tile__inner,
+.tile--city.tile--o-right .tile__inner { padding-left: var(--flag-clear); }
 
 .tile__name {
-  font-weight: 600;
+  /* Nunito's own skeleton at its narrowest width, so the longest single words on any map
+     (Manchester, Birmingham, on the 48-tile board) fit the run without breaking. At 75%
+     the strokes read light, so it is a little heavier than the old 600; 700 is one step
+     too wide and breaks Birmingham again. */
+  font-family: var(--font-tile);
+  font-stretch: 75%;
+  font-weight: 650;
   letter-spacing: 0.01em;
   /* Names wrap now rather than ellipsing to "Water Co…". A side tile is narrow along
      its run but deep into the board, and that depth is exactly where a second line
@@ -379,48 +462,53 @@ button, input, select {
 .tile__price { color: var(--muted); font-size: 17cqmin; }
 .tile--corner .tile__name { font-weight: 700; }
 
-/* The country reads as a round flag badge rather than a full-bleed rectangle.
-   `overflow: hidden` on a circle crops the emoji's own aspect to a disc; where the
-   platform has no flag glyph this degrades to the two-letter code, still legible. */
+/* The country reads as a round flag badge sitting on the tile's inner border, half on the
+   tile and half over the board's middle, the way richup draws it. Out of the text flow,
+   so the badge costs the tile only half its height. The SVG is round already; this box
+   only places it and draws the ring. */
 .tile__flag {
-  width: 30cqmin;
-  height: 30cqmin;
-  flex-shrink: 0;
+  position: absolute;
+  z-index: 3;
+  width: var(--flag);
+  height: var(--flag);
   border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24cqmin;
-  line-height: 1;
-  background: rgba(255,255,255,0.08);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.22), 0 1px 4px rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.22), 0 2px 6px rgba(0,0,0,0.6);
 }
-/* Badges are pictures, not text: they opt out of the vertical writing mode, and on the
+/* Circle-flags SVGs are drawn as discs on a square canvas, so filling the badge's box is
+   all it takes, at any size. */
+.flag-img { display: block; width: 100%; height: 100%; user-select: none; }
+/* Tile icons stand in for emoji, so they size the way a glyph did: one em square, from
+   whatever font size their container already sets. */
+.icon-img { display: block; width: 1em; height: 1em; object-fit: contain; user-select: none; }
+/* Black-on-transparent art would vanish on a dark tile. Inverting turns it light, and the
+   half-turn of hue puts any colour accents (earnings tax's teal) back near where they were. */
+.icon-img--dark { filter: invert(1) hue-rotate(180deg); }
+.tile--o-bottom .tile__flag { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.tile--o-top .tile__flag { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+.tile--o-left .tile__flag { right: 0; top: 50%; transform: translate(50%, -50%); }
+.tile--o-right .tile__flag { left: 0; top: 50%; transform: translate(-50%, -50%); }
+/* Icons are pictures, not text: they opt out of the vertical writing mode, and on the
    left run they undo the inner box's 180deg so a "?" is not served upside down. */
-.tile--o-left .tile__flag, .tile--o-right .tile__flag,
 .tile--o-left .tile__icon, .tile--o-right .tile__icon { writing-mode: horizontal-tb; }
-.tile--o-left .tile__flag, .tile--o-left .tile__icon { transform: rotate(180deg); }
+.tile--o-left .tile__icon { transform: rotate(180deg); }
 
-/* Ownership is the loudest thing on a tile: a thick slab on the edge facing the
-   middle of the board, so who owns what reads from across the table. The country
-   group used to own this edge as a thin stripe; the tile tint and flag badge carry
-   that job now, which frees the bar for the owner alone. */
+/* Ownership is the loudest thing on a tile: a thick slab on the outer rim, so who owns
+   what reads from across the table. The inner edge belongs to the flag badge. */
 .tile__owner {
   position: absolute;
   z-index: 2;
   border-radius: 4px;
   box-shadow: 0 0 12px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.28);
 }
-.tile--o-bottom .tile__owner { top: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
-.tile--o-top .tile__owner { bottom: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
-.tile--o-left .tile__owner { right: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
-.tile--o-right .tile__owner { left: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
+.tile--o-bottom .tile__owner { bottom: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
+.tile--o-top .tile__owner { top: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
+.tile--o-left .tile__owner { left: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
+.tile--o-right .tile__owner { right: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
 
 /* Houses used to float in the tile's corner, where they landed on top of the flag badge.
-   They now sit in the text block under the price — a picture like the badge, so they opt
+   They sit in the text block under the price — a picture like the badge, so they opt
    out of the vertical writing mode and undo the left run's 180deg. */
-.tile__buildings { font-size: 10cqmin; line-height: 1; letter-spacing: -0.2em; }
+.tile__buildings { font-size: 12cqmin; line-height: 1; display: flex; justify-content: center; gap: 1cqmin; }
 .tile--o-left .tile__buildings, .tile--o-right .tile__buildings { writing-mode: horizontal-tb; }
 .tile--o-left .tile__buildings { transform: rotate(180deg); }
 /* Tokens live in their own full-grid overlay (`.board__tokens-layer`, placed
@@ -488,7 +576,9 @@ button, input, select {
   display: flex;
   min-height: 0;
   min-width: 0;
-  padding: calc(0.5rem * var(--tile-scale, 1));
+  /* Clears the flags that overhang the inner ring of tiles (half of a 40cqmin badge on a
+     tile about a twelfth of the board), so they never sit on the log's border. */
+  padding: calc(0.5rem * var(--tile-scale, 1) + 1.8cqmin);
 }
 .board__center-inner {
   position: relative;
@@ -504,6 +594,9 @@ button, input, select {
 }
 /* The dice sit centred in the space above the log rather than pinned to the top edge. */
 .board__stage {
+  /* Containing block for the drawn-card popup, so it covers the stage and not the log. */
+  position: relative;
+  width: 100%;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -590,9 +683,10 @@ button, input, select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   gap: 0.35rem;
   padding: calc(0.8rem * var(--tile-scale, 1));
+  overflow-y: auto; /* long card text scrolls inside a small stage instead of spilling out */
   background: var(--surface);
   border: 1px solid var(--accent);
   border-radius: var(--radius);
@@ -637,6 +731,8 @@ button, input, select {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent), 0 10px 26px rgba(124, 92, 255, 0.3);
 }
+.player-card { cursor: pointer; }
+.player-card--selected { outline: 2px solid rgba(124, 92, 255, 0.55); outline-offset: 2px; }
 .player-card--bankrupt { opacity: 0.45; }
 .player-card__avatar {
   width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; font-size: 1.05rem;
@@ -651,9 +747,102 @@ button, input, select {
 }
 .player-card__offline { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
 .player-card__cash { color: var(--money); font-size: 1rem; font-weight: 700; white-space: nowrap; }
+.player-card__cash--negative { color: var(--danger); }
 .player-card__jail { color: var(--danger); font-size: 0.8rem; }
 .player-card__properties { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.25rem; }
 .property-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* Takes whatever height the rail has left under the action bar and scrolls inside itself. */
+.properties-panel {
+  flex: 1;
+  min-height: 7rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+.properties-panel__list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; }
+.properties-panel__empty { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.properties-group { display: flex; flex-direction: column; gap: 0.3rem; position: relative; }
+.properties-group + .properties-group { border-top: 1px solid var(--border); padding-top: 0.6rem; }
+.properties-row {
+  display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem;
+  padding-right: 0.4rem; border-left: 3px solid var(--muted); background: rgba(255,255,255,0.03);
+  border-radius: 0 6px 6px 0;
+}
+.properties-row__open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.3rem 0.5rem; background: transparent; border: none; border-radius: 0 6px 6px 0;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.properties-row:hover { background: rgba(255,255,255,0.07); }
+.properties-row__open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.properties-row__sell { flex-shrink: 0; }
+.properties-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.properties-row__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.properties-row__dev { color: var(--muted); font-size: 0.75rem; }
+.properties-row__price { color: rgba(255,255,255,0.65); }
+
+/* ─── Property card ─────────────────────────────────────────────────── */
+
+/* A compact chrome-grey deed pinned beside the clicked row: a colour band on top, light ink. */
+.deed {
+  position: fixed;
+  z-index: 50;
+  width: 230px;
+  max-height: calc(100vh - 1rem);
+  overflow-y: auto;
+  background: linear-gradient(160deg, #4b4e59 0%, #383a43 55%, #2e3038 100%);
+  color: var(--text);
+  border: 1px solid #5a5d68;
+  border-radius: 10px;
+  padding: 0.4rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 32px rgba(0,0,0,0.55);
+  outline: none;
+}
+.deed__header {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 0.05rem;
+  padding: 0.45rem 1.6rem 0.4rem;
+  border-radius: 6px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.deed__badge {
+  width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; line-height: 1;
+}
+.deed__name { margin: 0; font-size: 0.95rem; font-weight: 700; }
+.deed__country { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.9; }
+.deed__close {
+  position: absolute; top: 0.25rem; right: 0.25rem;
+  width: 1.3rem; height: 1.3rem; border-radius: 50%; border: none; padding: 0;
+  background: rgba(0,0,0,0.35); color: #fff; font-size: 0.7rem; line-height: 1; cursor: pointer;
+}
+.deed__close:hover { background: rgba(0,0,0,0.55); }
+.deed__close:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.deed__owner {
+  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  margin: 0.4rem 0 0.25rem; font-size: 0.72rem; color: #b9bcc6;
+}
+.deed__owner .trade-col__dot { width: 0.6rem; height: 0.6rem; }
+.deed__rents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.deed__rent {
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  padding: 0.12rem 0.4rem; border-radius: 4px; font-size: 0.78rem;
+}
+.deed__rent--current { background: rgba(124, 92, 255, 0.4); box-shadow: inset 3px 0 0 #a58fff; font-weight: 700; }
+.deed__value { font-variant-numeric: tabular-nums; text-align: right; }
+.deed__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.5rem; }
+.deed__action { display: flex; flex-direction: column; align-items: stretch; gap: 0.15rem; text-align: center; }
+.deed__action > span:first-child { display: flex; }
+.deed__button { flex: 1; border-radius: 6px; }
+.deed__caption { font-size: 0.68rem; color: #b9bcc6; }
+.deed__bank { margin: 0.45rem 0 0.1rem; text-align: center; font-size: 0.68rem; color: #b9bcc6; }
+.deed__error { margin: 0.45rem 0 0.1rem; font-size: 0.72rem; }
 
 .action-bar {
   background: var(--surface);
@@ -669,10 +858,7 @@ button, input, select {
   margin: 0; font-size: 0.78rem; color: var(--accent); font-weight: 700;
 }
 .action-bar__waiting, .action-bar__over { color: var(--muted); margin: 0; font-size: 0.9rem; }
-
-.building-controls { width: 100%; display: flex; flex-direction: column; gap: 0.4rem; }
-.building-controls__row { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
-.building-controls__name { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.action-bar__debt { color: var(--danger); margin: 0; font-size: 0.9rem; line-height: 1.35; }
 
 .event-log {
   background: var(--surface);
@@ -690,3 +876,149 @@ button, input, select {
 
 .dev-preview { padding: 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
 .dev-preview__label { color: var(--muted); }
+
+/* ─── Trades ────────────────────────────────────────────────────────── */
+
+.trades-panel__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.trades-panel__row {
+  display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;
+  padding: 0.4rem 0.5rem; border-radius: 8px; border: 1px solid transparent;
+}
+.trades-panel__text { flex: 1; min-width: 0; color: var(--muted); }
+/* An answer is owed on an incoming trade, so it is the one that pulses for attention. */
+.trades-panel__row--incoming {
+  border-color: var(--accent);
+  background: rgba(124, 92, 255, 0.12);
+  animation: trade-pulse 1.6s ease-in-out infinite;
+}
+.trades-panel__row--incoming .trades-panel__text { color: var(--text); }
+@keyframes trade-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 92, 255, 0.45); }
+  50% { box-shadow: 0 0 0 4px rgba(124, 92, 255, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trades-panel__row--incoming { animation: none; }
+}
+
+.trade-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(6, 4, 14, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.trade-modal {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #13111c;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: 1.5rem 2rem 1.75rem;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+}
+.trade-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: none;
+  background: #1c1a26;
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.trade-modal__close:hover { background: var(--surface-2); }
+.trade-modal__title { margin: 0 0 1.25rem; text-align: center; font-size: 1.35rem; font-weight: 600; color: #a99bd8; }
+.trade-modal__columns { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.25rem; align-items: stretch; }
+.trade-modal__divider {
+  width: 2.6rem;
+  border-radius: 1.3rem 1.3rem 0 0;
+  background: linear-gradient(180deg, #221c45, rgba(34, 28, 69, 0));
+  display: flex;
+  justify-content: center;
+  padding-top: 0.8rem;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+.trade-modal__error {
+  margin: 1rem 0 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--danger);
+  background: rgba(255, 107, 129, 0.1);
+  color: var(--danger);
+  font-size: 0.9rem;
+  text-align: center;
+}
+.trade-modal__footer { display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.4rem; }
+.trade-modal__send { min-width: 10rem; font-size: 1.05rem; border-radius: 8px; padding: 0.7em 1.6em; }
+
+.trade-col { display: flex; flex-direction: column; gap: 0.8rem; min-width: 0; }
+.trade-col__head { display: flex; align-items: center; justify-content: center; gap: 0.55rem; font-size: 1.2rem; font-weight: 600; }
+.trade-col__dot { width: 1.3rem; height: 1.3rem; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 -3px 6px rgba(0,0,0,0.25); }
+.trade-col__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trade-col__cash input[type="range"] { width: 100%; accent-color: #ffffff; }
+.trade-col__range { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 0.85rem; }
+.trade-col__range--fixed { justify-content: center; }
+.trade-col__chip {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.25em 0.8em;
+  font-size: 0.95rem;
+}
+.trade-col__tiles { display: flex; flex-direction: column; gap: 0.5rem; }
+.trade-col__empty { margin: 0; text-align: center; color: var(--muted); font-size: 0.9rem; }
+.trade-col__total { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: auto; }
+
+.trade-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 2px solid #2a2836;
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+.trade-tile:hover:not(:disabled) { border-color: var(--accent); }
+.trade-tile--selected { background: #5b45d6; border-color: #5b45d6; }
+.trade-tile:disabled { cursor: default; }
+/* A read-only list is still the trade's content, so it keeps full contrast; only rows that
+   can't be picked fade. */
+.trade-col .trade-tile:disabled:not(.trade-tile--selected) { opacity: 0.45; cursor: not-allowed; }
+.trade-tile__badge {
+  width: 1.5rem; height: 1.5rem; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.15rem; line-height: 1;
+}
+.trade-tile__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trade-tile__price { color: rgba(255,255,255,0.65); }
+.trade-tile__price--negative { color: var(--danger); }
+.trade-tile__bot { color: var(--muted); font-size: 0.8rem; }
+.trade-tile__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.trade-tile__reason { color: var(--muted); font-size: 0.8rem; white-space: normal; }
+.trade-picker { display: flex; flex-direction: column; gap: 0.5rem; max-width: 26rem; margin: 0 auto; }
+.trade-picker .trade-tile:disabled { opacity: 0.55; cursor: not-allowed; }
+.trade-modal__back { position: absolute; top: 0.9rem; left: 1rem; }
+.trades-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+
+.trade-pardon { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.trade-pardon__counter { display: flex; align-items: center; gap: 0.5rem; color: var(--text); }
+
+@media (max-width: 640px) {
+  .trade-modal { padding: 1.25rem 1rem; }
+  .trade-modal__columns { grid-template-columns: 1fr; }
+  .trade-modal__divider { display: none; }
+}

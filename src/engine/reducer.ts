@@ -1,8 +1,10 @@
 import type { GameAction, GameEvent, GameMap, GameState, Player, PlayerId, PlayerAction, RoomSettings } from '../shared/types';
 import { buyHotel, buyHouse, sellHotel, sellHouse } from './buildings';
-import { advanceTurn, openDebt, phaseAfterLanding, settleBankruptcy, trySettleOrBankrupt } from './debt';
+import { advanceTurn, openDebt, payDebtFromIncome, phaseAfterLanding, settleBankruptcy } from './debt';
 import { moveForwardAndResolve, sendToJail, freshDeckOrder } from './landing';
 import { rollDice, shuffle } from './rng';
+import { sellProperty } from './propertySale';
+import { acceptTrade, cancelTrade, declineTrade, dropInvalidTrades, proposeTrade } from './trades';
 import { ok, reject, type ActionResult } from './result';
 import { addToVacationPot, currentPlayer, getPlayer, updatePlayer, updateTile } from './state';
 
@@ -39,8 +41,8 @@ export function createGame(
     tiles: map.tiles.map(() => ({ owner: null, houses: 0, hotel: false, mortgaged: false })),
     bank: { houses: 32, hotels: 12 },
     decks: {
-      treasure: { order: freshDeckOrder('treasure', shuffle, rng), index: 0 },
-      surprise: { order: freshDeckOrder('surprise', shuffle, rng), index: 0 },
+      treasure: { order: freshDeckOrder('treasure', map, shuffle, rng), index: 0 },
+      surprise: { order: freshDeckOrder('surprise', map, shuffle, rng), index: 0 },
     },
     phase: 'LOBBY',
     debt: null,
@@ -48,6 +50,9 @@ export function createGame(
     lastRoll: null,
     vacationPot: 0,
     winner: null,
+    trades: [],
+    tradeSendCounts: {},
+    nextTradeId: 0,
   };
 }
 
@@ -62,11 +67,9 @@ function canSellDuringDebt(state: GameState, playerId: PlayerId): boolean {
   return state.phase === 'RESOLVING_DEBT' && state.debt !== null && state.debt.debtor === playerId;
 }
 
-function afterDebtorSale(map: GameMap, state: GameState, r: ActionResult): ActionResult {
+function afterSale(r: ActionResult): ActionResult {
   if (r.error) return r;
-  if (state.phase !== 'RESOLVING_DEBT') return r;
-  const settled = trySettleOrBankrupt(map, r.state, r.events);
-  return { state: settled.state, events: settled.events };
+  return payDebtFromIncome(r.state, r.events);
 }
 
 function handleRoll(map: GameMap, state: GameState, playerId: PlayerId, rng: () => number): ActionResult {
@@ -111,7 +114,7 @@ function handleRoll(map: GameMap, state: GameState, playerId: PlayerId, rng: () 
     // Can't even afford the exit fee: treat as an ordinary bank debt. This is a rare
     // corner (deliberate simplification) — once the debt clears the turn simply ends;
     // the missed move is not replayed.
-    const r = openDebt(map, next, playerId, fee, null);
+    const r = openDebt(next, playerId, fee, null);
     return { state: r.state, events: [...events, ...r.events] };
   }
 
@@ -189,9 +192,7 @@ function handleDeclareBankruptcy(map: GameMap, state: GameState, playerId: Playe
   if (state.phase === 'LOBBY' || state.phase === 'GAME_OVER') return reject(state, 'Game not in progress');
   const player = getPlayer(state, playerId);
   if (player.bankrupt) return reject(state, 'Already bankrupt');
-  const creditor = state.phase === 'RESOLVING_DEBT' && state.debt && state.debt.debtor === playerId ? state.debt.creditor : null;
-  const r = settleBankruptcy(map, state, playerId, creditor);
-  return { state: r.state, events: r.events };
+  return settleBankruptcy(map, state, playerId);
 }
 
 function dispatch(map: GameMap, state: GameState, playerId: PlayerId, action: GameAction, rng: () => number): ActionResult {
@@ -222,13 +223,22 @@ function dispatch(map: GameMap, state: GameState, playerId: PlayerId, action: Ga
       if (!canMutateAssetsNormally(state, playerId) && !canSellDuringDebt(state, playerId)) {
         return reject(state, 'Cannot sell right now');
       }
-      return afterDebtorSale(map, state, sellHouse(map, state, playerId, action.tileIndex));
+      return afterSale(sellHouse(map, state, playerId, action.tileIndex));
     }
     case 'sell_hotel': {
       if (!canMutateAssetsNormally(state, playerId) && !canSellDuringDebt(state, playerId)) {
         return reject(state, 'Cannot sell right now');
       }
-      return afterDebtorSale(map, state, sellHotel(map, state, playerId, action.tileIndex));
+      return afterSale(sellHotel(map, state, playerId, action.tileIndex));
+    }
+    case 'sell_property': {
+      if (!canMutateAssetsNormally(state, playerId) && !canSellDuringDebt(state, playerId)) {
+        return reject(state, 'Cannot sell right now');
+      }
+      const sold = afterSale(sellProperty(map, state, playerId, action.tileIndex));
+      if (sold.error) return sold;
+      // Pending trades that list this tile can no longer go through.
+      return dropInvalidTrades(map, sold.state, sold.events);
     }
     case 'pay_jail_fee':
       return handlePayJailFee(state, playerId);
@@ -238,6 +248,14 @@ function dispatch(map: GameMap, state: GameState, playerId: PlayerId, action: Ga
       return handleEndTurn(state, playerId);
     case 'declare_bankruptcy':
       return handleDeclareBankruptcy(map, state, playerId);
+    case 'propose_trade':
+      return proposeTrade(map, state, playerId, action);
+    case 'accept_trade':
+      return acceptTrade(map, state, playerId, action.tradeId);
+    case 'decline_trade':
+      return declineTrade(state, playerId, action.tradeId);
+    case 'cancel_trade':
+      return cancelTrade(state, playerId, action.tradeId);
   }
 }
 

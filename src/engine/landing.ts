@@ -5,8 +5,8 @@
  * landing on the new tile must resolve exactly like any other landing.
  *
  * Every branch here leaves `state.phase` fully decided by the time it
- * returns: AWAITING_BUY when a buy prompt is owed, whatever RESOLVING_DEBT /
- * GAME_OVER openDebt/settleBankruptcy produced, or phaseAfterLanding() when
+ * returns: AWAITING_BUY when a buy prompt is owed, RESOLVING_DEBT when
+ * openDebt left a balance owing, or phaseAfterLanding() when
  * nothing is left pending. Callers (reducer.ts) never need to second-guess it.
  */
 import type { Card, CardEffect, DeckId, GameEvent, GameMap, GameState, PlayerId, Tile } from '../shared/types';
@@ -49,7 +49,7 @@ function chargeOrDebt(map: GameMap, state: GameState, playerId: PlayerId, amount
     }
     return finish(next, [...events, { type: 'paid', from: playerId, to: creditor, amount, reason }]);
   }
-  const r = openDebt(map, state, playerId, amount, creditor);
+  const r = openDebt(state, playerId, amount, creditor);
   return { state: r.state, events: [...events, ...r.events] };
 }
 
@@ -194,7 +194,7 @@ export function applyCardEffect(map: GameMap, state: GameState, playerId: Player
       }
       const [first, ...rest] = others;
       const queued = rest.map((o) => ({ amount, creditor: o.id }));
-      const r = openDebt(map, state, playerId, amount, first!.id, queued);
+      const r = openDebt(state, playerId, amount, first!.id, queued);
       return { state: r.state, events: [...events, ...r.events] };
     }
 
@@ -304,10 +304,39 @@ export function resolveLanding(map: GameMap, state: GameState, playerId: PlayerI
   return resolveOwnable(map, state, playerId, tile, events);
 }
 
+/**
+ * Whether a card can do something on this map. This is how maps opt out of
+ * cards: nothing is hand-maintained, it is worked out from the tiles, so a new
+ * map is covered automatically. Every effect kind makes a deliberate choice
+ * here, so adding a kind to CardEffect fails to compile until it is decided.
+ */
+export function isCardPlayableOnMap(card: Card, map: GameMap): boolean {
+  const effect = card.effect;
+  switch (effect.kind) {
+    case 'move_to_nearest':
+      return map.tiles.some((t) => t.type === effect.tileType);
+    case 'move_to':
+      return Number.isInteger(effect.tileIndex) && effect.tileIndex >= 0 && effect.tileIndex < map.tiles.length;
+    case 'money':
+    case 'money_from_each':
+    case 'move_relative':
+    case 'go_to_jail':
+    case 'pardon':
+    case 'repairs':
+      return true;
+  }
+}
+
 /** Shuffles a fresh deck order for createGame; card content is looked up lazily via getCard. */
-export function freshDeckOrder(deck: DeckId, shuffle: <T>(items: readonly T[], rng: () => number) => T[], rng: () => number): string[] {
+export function freshDeckOrder(
+  deck: DeckId,
+  map: GameMap,
+  shuffle: <T>(items: readonly T[], rng: () => number) => T[],
+  rng: () => number,
+): string[] {
+  // Filter before shuffling so the rng stream depends only on the playable set.
   return shuffle(
-    getDeck(deck).map((c) => c.id),
+    getDeck(deck).filter((c) => isCardPlayableOnMap(c, map)).map((c) => c.id),
     rng,
   );
 }

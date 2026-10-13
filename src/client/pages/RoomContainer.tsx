@@ -18,6 +18,8 @@ export function RoomContainer({ code }: { code: string }) {
           events={conn.events}
           onAction={conn.sendAction}
           code={code}
+          error={conn.error}
+          onClearError={conn.clearError}
         />
       );
     }
