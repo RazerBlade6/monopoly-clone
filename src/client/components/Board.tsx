@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameEvent, GameMap, GameState, Player, Tile } from '../../shared/types';
 import { CORNER_TRACK_RATIO, ringLayout, trackSpan, type Edge, type GridPos } from '../ringLayout';
 import { countryTint } from '../colors';
-import { tileIcon, tileSubLabel } from '../tileArt';
-import { FlagImage } from './TileBadge';
+import { tileSubLabel } from '../tileArt';
+import { FlagImage, Icon, TileIcon } from './TileBadge';
 import { EventLog, getCardSafe } from './EventLog';
 
 function formatPhase(phase: GameState['phase']): string {
@@ -394,8 +394,6 @@ function BoardTile({
   onClick?: (el: HTMLElement) => void;
 }) {
   const { row, col, edge, isCorner } = pos;
-  // A city is identified by its tint and its flag badge, so it skips the generic icon.
-  const icon = tile.type === 'city' ? '' : tileIcon(tile);
   const sub = tileSubLabel(tile);
   // Corners read upright; the four runs read along their own edge, which is what
   // buys side tiles enough room for a full city name instead of an ellipsis.
@@ -424,13 +422,17 @@ function BoardTile({
           border, half over the board's middle (see `.tile__flag`), which leaves the whole
           depth of the tile for the words. Other tiles keep their icon in the flow. */}
       <div className="tile__inner">
-        {icon && <div className="tile__icon">{icon}</div>}
+        {tile.type !== 'city' && <div className="tile__icon"><TileIcon tile={tile} /></div>}
         <div className="tile__text">
           <div className="tile__name">{tile.name}</div>
           {sub && <div className="tile__sub">{sub}</div>}
           {'price' in tile && <div className="tile__price">${tile.price}</div>}
           {(houses > 0 || hotel) && (
-            <div className="tile__buildings">{hotel ? '🏨' : '🏠'.repeat(houses)}</div>
+            <div className="tile__buildings">
+              {hotel
+                ? <Icon name="hotel" />
+                : Array.from({ length: houses }, (_, n) => <Icon key={n} name="house" />)}
+            </div>
           )}
         </div>
       </div>
