@@ -3,7 +3,7 @@
 Replacements for the emoji the board uses today (`src/client/tileArt.ts`). The same files
 will also be used in the properties panel and on deed cards, so they appear at several sizes.
 
-Flags done; 14 of 15 icons in, `airport.svg` missing, ten icon licences to confirm.
+Flags done; all 15 icons in; three icon licences still to confirm (see below).
 
 ## Flags: done
 
@@ -11,14 +11,15 @@ All 14 are in `src/client/assets/flags/`, from HatScripts' `circle-flags` (MIT).
 commit and licence are in that folder's `README.md` and `LICENSE.md`, and the attribution
 is in `public/THIRD_PARTY_NOTICES.txt`, which the home page links to.
 
-## Icons: 14 of 15 in, one missing
+## Icons: all 15 in, three licences open
 
-Fourteen are in `src/client/assets/icons/` and wired in. Still to do:
+All fifteen are in `src/client/assets/icons/` and wired in. `assets/icons/README.md` has each
+one's SVG Repo page and licence. Three still block the merge into `dev`:
 
-- **`airport.svg` is missing.** The board shows ✈️ for airports until it's added.
-- **Ten licences are unconfirmed.** SVG Repo licenses each icon by its collection, and
-  ten files carry nothing that identifies their source. `assets/icons/README.md` lists
-  them; each needs its SVG Repo page to confirm the licence and any attribution.
+- **`prison.svg`:** the page supplied (398098, police-car-light) is go-to-prison's icon. The
+  jail-bars icon's own page is needed.
+- **`hotel.svg`:** MIT, which needs the copyright holder's name for the notice.
+- **`water-company.svg`:** CC Attribution, which needs the author's name for the credit.
 
 Lucky Wheel has no utilities.
 

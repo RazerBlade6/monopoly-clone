@@ -338,10 +338,25 @@ unmodified; some are lightened on screen with a CSS colour filter.
   licensed under Creative Commons Attribution 4.0 International.
   https://creativecommons.org/licenses/by/4.0/
 
+* "Airplane" (airport.svg) from Twemoji, Copyright Twitter, Inc and other
+  contributors. https://github.com/jdecked/twemoji
+  Graphics licensed under Creative Commons Attribution 4.0 International.
+  https://creativecommons.org/licenses/by/4.0/
+
 * House (house.svg) from 16pxls, (c) Paul Mackenzie <paul@whatspauldoing.com>,
   licensed under Creative Commons Attribution-ShareAlike 4.0 International.
   https://creativecommons.org/licenses/by-sa/4.0/
   Displayed with its colours inverted by a CSS filter; the file is unchanged.
+
+* Dedicated to the public domain (CC0 or public domain), listed for completeness;
+  no attribution is required:
+    power-company.svg  https://www.svgrepo.com/svg/59169/lightning
+    gas-company.svg    https://www.svgrepo.com/svg/404501/burn-fire-flame-hot
+    start.svg          https://www.svgrepo.com/svg/181338/fast-forward-arrows
+    treasure.svg       https://www.svgrepo.com/svg/275527/treasure-chest
+    premium-tax.svg    https://www.svgrepo.com/svg/313128/diamond (Xicons.co)
+    vacation.svg       https://www.svgrepo.com/svg/282892/island
+    earnings-tax.svg   https://www.svgrepo.com/svg/460483/bill-dollar
 
 Apache License 2.0, as it applies to the Noto Emoji icons above:
 
