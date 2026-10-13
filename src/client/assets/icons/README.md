@@ -9,10 +9,10 @@ by a CSS filter (`.icon-img--dark` in `styles.css`), and their files are left as
 |---|---|---|---|
 | `airport.svg` | Twemoji, Twitter (marker `iconify--twemoji`) | https://www.svgrepo.com/svg/404709/airplane | CC BY 4.0 (SVG Repo lists MIT; see below) |
 | `power-company.svg` | — | https://www.svgrepo.com/svg/59169/lightning | CC0 |
-| `water-company.svg` | "Energy" set (ids `Energy01`…) | https://www.svgrepo.com/svg/421773/drop-energy-fuel | CC Attribution — **author still to confirm** |
+| `water-company.svg` | Icon Lauk | https://www.svgrepo.com/svg/421773/drop-energy-fuel | CC Attribution |
 | `gas-company.svg` | — | https://www.svgrepo.com/svg/404501/burn-fire-flame-hot | CC0 |
 | `start.svg` | — | https://www.svgrepo.com/svg/181338/fast-forward-arrows | CC0 |
-| `prison.svg` | — | **unknown** (the link supplied was go-to-prison's) | **unknown** |
+| `prison.svg` | Ruslan Mullakaev | https://www.svgrepo.com/svg/420182/jail-lock-protect | CC Attribution |
 | `go-to-prison.svg` | Noto Emoji, Google (marker `iconify--noto`) | https://www.svgrepo.com/svg/398098/police-car-light | Apache 2.0 |
 | `treasure.svg` | — | https://www.svgrepo.com/svg/275527/treasure-chest | CC0 |
 | `surprise.svg` | Emoji One (marker `iconify--emojione`) | — | CC BY 4.0 |
@@ -21,7 +21,7 @@ by a CSS filter (`.icon-img--dark` in `styles.css`), and their files are left as
 | `tax-refund.svg` | Noto Emoji, Google (marker `iconify--noto`) | — | Apache 2.0 |
 | `vacation.svg` | — | https://www.svgrepo.com/svg/282892/island | CC0 |
 | `house.svg` | 16pxls, © Paul Mackenzie (stated in the file) | — | CC BY-SA 4.0 |
-| `hotel.svg` | — | https://www.svgrepo.com/svg/455879/apartment-building | MIT — **copyright holder still to confirm** |
+| `hotel.svg` | Vectopus | https://www.svgrepo.com/svg/455879/apartment-building | MIT |
 
 Sources for the confirmed rows:
 - Noto Emoji: https://github.com/googlefonts/noto-emoji. Its README: "Tools and most
@@ -32,7 +32,9 @@ Sources for the confirmed rows:
 - Twemoji: SVG Repo shows MIT, but that is the licence of Twemoji's code. Its README says
   "Graphics licensed under CC-BY 4.0", and the file is one of the graphics, so it is
   credited under CC BY 4.0 (https://github.com/jdecked/twemoji).
-- SVG Repo pages and licences for the rest were read off SVG Repo by hand; svgrepo.com
+- SVG Repo shows "CC Attribution" without a version for the water company and prison
+  icons; they are credited under CC BY 4.0, the current version.
+- SVG Repo pages, licences and authors for the rest were read off SVG Repo by hand; svgrepo.com
   refuses automated requests (HTTP 429), so they could not be re-checked from here.
 
 The attributions themselves are in `public/THIRD_PARTY_NOTICES.txt`.
