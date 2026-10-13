@@ -15,7 +15,12 @@
      so this is what "make the text bigger" turns. Tile faces are sized against the tile
      itself instead (see `container-type` on `.tile`) and do not follow it. */
   font-size: 17px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Nunito for everything, Comfortaa for the title, and a narrowed Nunito Sans for tile
+     names (see `.tile__name`). All three are bundled from fontsource in `main.tsx`. */
+  --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-title: "Comfortaa Variable", var(--font-system);
+  --font-tile: "Nunito Sans Variable", var(--font-system);
+  font-family: "Nunito Variable", var(--font-system);
 }
 
 * { box-sizing: border-box; }
@@ -99,7 +104,7 @@ button, input, select {
   max-width: 380px;
   text-align: center;
 }
-.home__title { margin: 0 0 0.4rem; font-size: 1.8rem; }
+.home__title { margin: 0 0 0.4rem; font-size: 1.8rem; font-family: var(--font-title); }
 .home__subtitle { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.95rem; }
 .home__error, .lobby__error { color: var(--danger); font-size: 0.9rem; margin-top: 0.6rem; }
 .home__divider { display: flex; align-items: center; color: var(--muted); margin: 1.5rem 0; font-size: 0.85rem; }
@@ -237,6 +242,7 @@ button, input, select {
   overflow-y: auto;
 }
 .brand {
+  font-family: var(--font-title);
   font-weight: 800;
   font-size: 1.7rem;
   line-height: 1.1;
@@ -398,7 +404,13 @@ button, input, select {
 .tile--o-right .tile__inner { padding-left: var(--owner-clear); }
 
 .tile__name {
-  font-weight: 600;
+  /* Nunito's own skeleton at its narrowest width, so the longest single words on any map
+     (Manchester, Birmingham, on the 48-tile board) fit the run without breaking. At 75%
+     the strokes read light, so it is a little heavier than the old 600; 700 is one step
+     too wide and breaks Birmingham again. */
+  font-family: var(--font-tile);
+  font-stretch: 75%;
+  font-weight: 650;
   letter-spacing: 0.01em;
   /* Names wrap now rather than ellipsing to "Water Co…". A side tile is narrow along
      its run but deep into the board, and that depth is exactly where a second line
