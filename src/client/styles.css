@@ -342,6 +342,14 @@ button, input, select {
   z-index: 1;
 }
 .tile--corner { background: var(--surface); }
+/* Properties open their deed card. A lift and a brighter border say so on hover, and the
+   keyboard focus ring is the accent colour, since a tile is a button for keyboard users too. */
+.tile--clickable { cursor: pointer; transition: filter 0.12s ease, border-color 0.12s ease; }
+.tile--clickable:hover { filter: brightness(1.18); border-color: rgba(255,255,255,0.45); }
+.tile--clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 2; }
+@media (prefers-reduced-motion: reduce) {
+  .tile--clickable { transition: none; }
+}
 
 /* The inner box carries all the text. On the left and right runs it switches to
    vertical writing so a full city name fits instead of being clipped to "Glas…";

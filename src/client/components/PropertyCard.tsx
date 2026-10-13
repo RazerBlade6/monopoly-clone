@@ -17,18 +17,25 @@ interface RentRow {
 }
 
 /**
- * A deed-style card for one owned property. Build buttons appear only when the owner is a
- * seat this tab drives, and act as that seat; each is enabled only when the engine's
+ * A deed-style card for one property, owned or not: a property on the market shows its
+ * price and the rents it would charge. Build buttons appear only when the owner is a seat
+ * this tab drives, and act as that seat; each is enabled only when the engine's
  * `legalActions` lists that exact action.
  */
 export function PropertyCard({
-  map, state, tileIndex, anchor, myPlayerId, error, onAction, onClose,
+  map, state, tileIndex, anchor, within, myPlayerId, error, onAction, onClose,
 }: {
   map: GameMap;
   state: GameState;
   tileIndex: number;
-  /** The clicked row's viewport rect; the card is placed beside it. */
+  /** The clicked row's or tile's viewport rect; the card is placed beside it. */
   anchor: DOMRect;
+  /**
+   * A viewport region the card should open into instead of its default left-of-the-row
+   * placement. A board tile passes the board's middle, inside the ring of tiles, so the card
+   * lands there rather than over the rails or across the tiles of another run.
+   */
+  within?: DOMRect;
   myPlayerId: PlayerId;
   /** The latest server refusal, shown inside the card so it isn't lost off-screen. */
   error: string | null;
@@ -47,11 +54,33 @@ export function PropertyCard({
     const margin = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    // Left of the row, since the list lives in the right rail; the right side only if the left has no room.
-    let left = anchor.left - gap - width;
-    if (left < margin) left = Math.min(anchor.right + gap, vw - width - margin);
-    left = Math.max(margin, left);
-    const top = Math.max(margin, Math.min(anchor.top, vh - height - margin));
+    let left: number;
+    let top: number;
+    if (within) {
+      // Off whichever side of the tile faces the region's centre, centred on the tile along
+      // the other axis — below a top-run tile, beside a left-run one — then held inside the
+      // region, so a tile near a corner doesn't push the card over the neighbouring run.
+      const cx = anchor.left + anchor.width / 2;
+      const cy = anchor.top + anchor.height / 2;
+      const dx = within.left + within.width / 2 - cx;
+      const dy = within.top + within.height / 2 - cy;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        left = cx - width / 2;
+        top = dy > 0 ? anchor.bottom + gap : anchor.top - gap - height;
+      } else {
+        left = dx > 0 ? anchor.right + gap : anchor.left - gap - width;
+        top = cy - height / 2;
+      }
+      left = Math.max(within.left, Math.min(left, within.right - width));
+      top = Math.max(within.top, Math.min(top, within.bottom - height));
+    } else {
+      // Left of the row, since the list lives in the right rail; the right side only if the left has no room.
+      left = anchor.left - gap - width;
+      if (left < margin) left = Math.min(anchor.right + gap, vw - width - margin);
+      top = anchor.top;
+    }
+    left = Math.max(margin, Math.min(left, vw - width - margin));
+    top = Math.max(margin, Math.min(top, vh - height - margin));
     setPos(prev => (prev && prev.left === left && prev.top === top ? prev : { left, top }));
   });
 
@@ -81,12 +110,11 @@ export function PropertyCard({
 
   const tile = map.tiles[tileIndex];
   const ownership = state.tiles[tileIndex];
+  // Absent for a property still on the market, or one sold back or freed by a bankruptcy
+  // while the card is open — the card then simply shows it as for sale.
   const owner = state.players.find(p => p.id === ownership?.owner);
-  // Sold, traded away to nobody, or lost to bankruptcy: the card has nothing left to describe.
-  const gone = !owner;
-  useEffect(() => { if (gone) onClose(); }, [gone, onClose]);
 
-  if (!tile || !ownership || !owner || (tile.type !== 'city' && tile.type !== 'airport' && tile.type !== 'company')) {
+  if (!tile || !ownership || (tile.type !== 'city' && tile.type !== 'airport' && tile.type !== 'company')) {
     return null;
   }
 
@@ -104,7 +132,8 @@ export function PropertyCard({
       ...[1, 2, 3, 4].map(n => ({ label: `Rent with ${n} ${n === 1 ? 'house' : 'houses'}`, value: `$${tile.rents[n]}` })),
       { label: 'Rent with hotel', value: `$${tile.rents[5]}` },
     ];
-    current = ownership.hotel ? 6
+    current = !owner ? -1
+      : ownership.hotel ? 6
       : ownership.houses > 0 ? ownership.houses + 1
       : ownsWholeGroup(map, state, owner.id, tile.countryId) ? 1
       : 0;
@@ -113,16 +142,16 @@ export function PropertyCard({
     rows = tile.rents.slice(0, Math.max(1, onMap)).map((rent, i) => ({
       label: `Rent with ${i + 1} ${i === 0 ? 'airport' : 'airports'}`, value: `$${rent}`,
     }));
-    current = countAirports(map, state, owner.id) - 1;
+    current = owner ? countAirports(map, state, owner.id) - 1 : -1;
   } else {
     const onMap = map.tiles.filter(t => t.type === 'company').length;
     rows = state.settings.companyRentMultipliers.slice(0, Math.max(1, onMap)).map((m, i) => ({
       label: `Owning ${i + 1} ${i === 0 ? 'company' : 'companies'}`, value: `${m}× dice total`,
     }));
-    current = countCompanies(map, state, owner.id) - 1;
+    current = owner ? countCompanies(map, state, owner.id) - 1 : -1;
   }
 
-  const seat = controls(state, myPlayerId, owner.id) ? owner.id : null;
+  const seat = owner && controls(state, myPlayerId, owner.id) ? owner.id : null;
 
   return (
     <div
@@ -136,8 +165,9 @@ export function PropertyCard({
         {tile.type === 'city' && <span className="deed__country">{displayName(tile.countryId)}</span>}
       </div>
       <div className="deed__owner">
-        <span className="trade-col__dot" style={{ background: owner.color }} />
-        Owned by {owner.name}
+        {owner
+          ? <><span className="trade-col__dot" style={{ background: owner.color }} />Owned by {owner.name}</>
+          : <>For sale · ${tile.price}</>}
       </div>
       <ul className="deed__rents">
         {rows.map((row, i) => (

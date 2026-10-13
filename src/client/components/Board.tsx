@@ -292,13 +292,23 @@ function TokenLayer({
   );
 }
 
+/** A property tile was clicked: its viewport rect, and the board's middle (inside the ring). */
+export type TileClickHandler = (tileIndex: number, rect: DOMRect, middle: DOMRect) => void;
+
 export function Board({
-  map, state, events = [],
+  map, state, events = [], onTileClick,
 }: {
   map: GameMap;
   state: GameState;
   events?: readonly GameEvent[];
+  /** Absent where the board is scenery (the lobby) and nothing on it should respond. */
+  onTileClick?: TileClickHandler;
 }) {
+  const middleRef = useRef<HTMLDivElement>(null);
+  const clickTile = onTileClick && ((tileIndex: number, el: HTMLElement) => {
+    const middle = middleRef.current;
+    if (middle) onTileClick(tileIndex, el.getBoundingClientRect(), middle.getBoundingClientRect());
+  });
   const { side, positions, tracks } = ringLayout(map.tiles.length);
   const template = tracks.map(t => `${t}fr`).join(' ');
   const units = tracks.reduce((a, b) => a + b, 0);
@@ -331,6 +341,7 @@ export function Board({
             owner={ownership ? ownerOf(state.players, ownership.owner) : null}
             houses={ownership?.houses ?? 0}
             hotel={ownership?.hotel ?? false}
+            onClick={clickTile && isProperty(tile) ? el => clickTile(i, el) : undefined}
           />
         );
       })}
@@ -340,7 +351,7 @@ export function Board({
         players={state.players}
         currentPlayerId={state.turnOrder[state.currentPlayerIndex]}
       />
-      <div className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
+      <div ref={middleRef} className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
         <div className="board__center-inner">
           {/* The dice sit centred in the space above the log rather than pinned to the
               top edge. The card popup lives inside the stage (`position: relative`) so it
@@ -366,14 +377,20 @@ export function Board({
   );
 }
 
+function isProperty(tile: Tile): boolean {
+  return tile.type === 'city' || tile.type === 'airport' || tile.type === 'company';
+}
+
 function BoardTile({
-  tile, pos, owner, houses, hotel,
+  tile, pos, owner, houses, hotel, onClick,
 }: {
   tile: Tile;
   pos: { row: number; col: number; edge: Edge; isCorner: boolean };
   owner: Player | null;
   houses: number;
   hotel: boolean;
+  /** Present on properties, which open their deed card; the rest of the board is inert. */
+  onClick?: (el: HTMLElement) => void;
 }) {
   const { row, col, edge, isCorner } = pos;
   // A city is identified by its tint and its flag badge, so it skips the generic icon.
@@ -385,9 +402,21 @@ function BoardTile({
 
   return (
     <div
-      className={`tile tile--${tile.type} tile--o-${orient}${isCorner ? ' tile--corner' : ''}`}
+      className={`tile tile--${tile.type} tile--o-${orient}${isCorner ? ' tile--corner' : ''}${onClick ? ' tile--clickable' : ''}`}
       style={{ gridRow: row, gridColumn: col, backgroundImage: tile.type === 'city' ? countryTint(tile.countryId) : undefined }}
       title={tile.name}
+      {...(onClick ? {
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': `${tile.name}, view card`,
+        onClick: (e: React.MouseEvent<HTMLDivElement>) => onClick(e.currentTarget),
+        onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(e.currentTarget);
+          }
+        },
+      } : {})}
     >
       {/* Inner edge to outer: the badge, then name and price, then the owner's slab on the
           outer rim. A city's flag is not in this flow at all — it sits on the tile's inner
