@@ -71,10 +71,12 @@ function NumberField({
 }
 
 export function SettingsPanel({
-  settings, editable, onChange,
+  settings, editable, onChange, playerCount = 0,
 }: {
   settings: RoomSettings;
   editable: boolean;
+  /** Seated players in the lobby; the player limit can't go below this. */
+  playerCount?: number;
   onChange: (partial: Partial<RoomSettings>) => void;
 }) {
   return (
@@ -103,7 +105,7 @@ export function SettingsPanel({
       <label className="settings-panel__field">
         <span>Max players</span>
         <NumberField
-          value={settings.maxPlayers} min={2} max={8} step={1} disabled={!editable}
+          value={settings.maxPlayers} min={Math.max(2, playerCount)} max={8} step={1} disabled={!editable}
           onCommit={v => onChange({ maxPlayers: v })}
         />
       </label>

@@ -39,8 +39,8 @@ export function createGame(
     tiles: map.tiles.map(() => ({ owner: null, houses: 0, hotel: false, mortgaged: false })),
     bank: { houses: 32, hotels: 12 },
     decks: {
-      treasure: { order: freshDeckOrder('treasure', shuffle, rng), index: 0 },
-      surprise: { order: freshDeckOrder('surprise', shuffle, rng), index: 0 },
+      treasure: { order: freshDeckOrder('treasure', map, shuffle, rng), index: 0 },
+      surprise: { order: freshDeckOrder('surprise', map, shuffle, rng), index: 0 },
     },
     phase: 'LOBBY',
     debt: null,

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, reduce } from './index';
 import { SMALL_MAP, WEIRD_MAP, identityRng, settingsFor } from './fixtures';
-import { applyCardEffect } from './landing';
+import { applyCardEffect, freshDeckOrder, isCardPlayableOnMap } from './landing';
+import { shuffle } from './rng';
+import { MAPS } from '../data/maps';
+import { getCard, getDeck } from '../data/cards';
+import type { Card, DeckId, MapId } from '../shared/types';
 import { updatePlayer, updateTile } from './state';
 
 const P1 = { id: 'p1', name: 'Ann', color: 'red' };
@@ -137,5 +141,47 @@ describe('applyCardEffect', () => {
     const r = applyCardEffect(SMALL_MAP, state, 'p1', { kind: 'move_to_nearest', tileType: 'airport', rentMultiplier: 2 }, []);
     const p1 = r.state.players.find((p) => p.id === 'p1')!;
     expect(p1.cash).toBe(before - rents[0]! * 2);
+  });
+});
+
+describe('map-aware decks', () => {
+  const rng = () => 0.37;
+  const order = (deck: DeckId, mapId: MapId) => freshDeckOrder(deck, MAPS[mapId], shuffle, rng);
+  const card = (effect: Card['effect']): Card => ({ id: 'x', deck: 'surprise', text: '', effect });
+
+  it('lucky-wheel drops the company card but keeps the airport cards', () => {
+    const ids = order('surprise', 'lucky-wheel');
+    expect(ids).not.toContain('surprise-06');
+    expect(ids).toContain('surprise-04');
+    expect(ids).toContain('surprise-05');
+    expect(ids).toHaveLength(15);
+  });
+
+  it('classic keeps all 16 cards in both decks', () => {
+    expect(order('surprise', 'classic')).toHaveLength(16);
+    expect(order('treasure', 'classic')).toHaveLength(16);
+  });
+
+  it.each(Object.keys(MAPS) as MapId[])('%s decks are non-empty and fully playable', (mapId) => {
+    for (const deck of ['treasure', 'surprise'] as const) {
+      const ids = order(deck, mapId);
+      expect(ids.length).toBeGreaterThan(0);
+      expect(ids.every((id) => isCardPlayableOnMap(getCard(id), MAPS[mapId]))).toBe(true);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(getDeck(deck).length).toBeGreaterThanOrEqual(ids.length);
+    }
+  });
+
+  it('predicate: move_to out of range is unplayable', () => {
+    const n = SMALL_MAP.tiles.length;
+    expect(isCardPlayableOnMap(card({ kind: 'move_to', tileIndex: n, collectStart: false }), SMALL_MAP)).toBe(false);
+    expect(isCardPlayableOnMap(card({ kind: 'move_to', tileIndex: -1, collectStart: false }), SMALL_MAP)).toBe(false);
+    expect(isCardPlayableOnMap(card({ kind: 'move_to', tileIndex: n - 1, collectStart: false }), SMALL_MAP)).toBe(true);
+  });
+
+  it('predicate: move_to_nearest needs a tile of that type', () => {
+    const noCompanies = { ...SMALL_MAP, tiles: SMALL_MAP.tiles.filter((t) => t.type !== 'company') };
+    const effect = { kind: 'move_to_nearest', tileType: 'company', rentMultiplier: 10 } as const;
+    expect(isCardPlayableOnMap(card(effect), noCompanies)).toBe(false);
   });
 });

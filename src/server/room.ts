@@ -302,6 +302,12 @@ export class Room extends DurableObject<Env> {
       return;
     }
 
+    const seated = this.getPlayers().length;
+    if (patch.maxPlayers !== undefined && patch.maxPlayers < seated) {
+      this.sendError(ws, `There are already ${seated} players in the room. Remove someone before lowering the limit.`);
+      return;
+    }
+
     const settings: RoomSettings = { ...this.settingsOf(row), ...patch };
     this.ctx.storage.sql.exec('UPDATE room SET settings = ? WHERE id = 1', JSON.stringify(settings));
     const freshRow = this.getRoomRow()!;

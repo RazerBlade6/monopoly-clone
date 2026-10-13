@@ -77,7 +77,7 @@ export function Lobby({
           myPlayerId={myPlayerId}
           {...(dev ? { onRemoveDummy: onRemovePlayer } : {})}
         />
-        <SettingsPanel settings={room?.settings ?? DEFAULT_SETTINGS} editable={isHost} onChange={onUpdateSettings} />
+        <SettingsPanel settings={room?.settings ?? DEFAULT_SETTINGS} editable={isHost} onChange={onUpdateSettings} playerCount={players.length} />
       </div>
 
       {isHost ? (
