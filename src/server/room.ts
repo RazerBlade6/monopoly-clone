@@ -19,7 +19,7 @@ import type {
 } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/types';
 import type { Env } from './env';
-import { parseClientMessage } from './protocol';
+import { isNameTaken, parseClientMessage } from './protocol';
 import { createGame, reduce } from './engine-adapter';
 import { getMap } from '../data/maps/index';
 import { createRng, randomSeed } from './rng';
@@ -249,6 +249,10 @@ export class Room extends DurableObject<Env> {
       this.sendError(ws, 'room is full');
       return;
     }
+    if (isNameTaken(name, players.map((p) => p.name))) {
+      this.sendError(ws, 'That name is already taken in this room.');
+      return;
+    }
 
     const playerId = crypto.randomUUID();
     const playerToken = crypto.randomUUID();
@@ -457,8 +461,10 @@ export class Room extends DurableObject<Env> {
     const usedNumbers = new Set(
       players.map((p) => Number(/^Bot (\d+)$/.exec(p.name)?.[1])).filter((n) => Number.isInteger(n)),
     );
+    const names = players.map((p) => p.name);
     let number = 1;
-    while (usedNumbers.has(number)) number++;
+    // A human may have joined as "bot 3"; skip past any number whose name is spoken for.
+    while (usedNumbers.has(number) || isNameTaken(`Bot ${number}`, names)) number++;
 
     this.ctx.storage.sql.exec(
       `INSERT INTO players (id, token, name, color, join_order, connected, disconnected_at, dummy_of)

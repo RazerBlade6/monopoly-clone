@@ -56,11 +56,22 @@ function isValidGameAction(action: unknown): action is GameAction {
   return false;
 }
 
+/** Canonical form for comparing player names: trimmed and case-folded. */
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** True if `name` collides with any of `existing` once trimmed and case-folded. */
+export function isNameTaken(name: string, existing: readonly string[]): boolean {
+  const wanted = normalizeName(name);
+  return existing.some((n) => normalizeName(n) === wanted);
+}
+
 /** Whitelist of settings keys and a type check for each. Unknown keys are rejected. */
 const SETTINGS_VALIDATORS: { [K in keyof RoomSettings]: (v: unknown) => boolean } = {
   mapId: (v) => typeof v === 'string' && MAP_IDS.includes(v as MapId),
-  startingCash: (v) => typeof v === 'number' && Number.isFinite(v),
-  maxPlayers: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 2,
+  startingCash: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+  maxPlayers: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 2 && v <= 8,
   doubleRentOnFullSet: (v) => typeof v === 'boolean',
   auction: (v) => typeof v === 'boolean',
   mortgage: (v) => typeof v === 'boolean',
@@ -68,9 +79,9 @@ const SETTINGS_VALIDATORS: { [K in keyof RoomSettings]: (v: unknown) => boolean 
   randomizePlayerOrder: (v) => typeof v === 'boolean',
   vacationCash: (v) => typeof v === 'boolean',
   noRentInPrison: (v) => typeof v === 'boolean',
-  startSalary: (v) => typeof v === 'number' && Number.isFinite(v),
-  landOnStartBonus: (v) => typeof v === 'number' && Number.isFinite(v),
-  jailFee: (v) => typeof v === 'number' && Number.isFinite(v),
+  startSalary: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+  landOnStartBonus: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+  jailFee: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0,
   companyRentMultipliers: (v) => Array.isArray(v) && v.every((n) => typeof n === 'number'),
   unlimitedBuildings: (v) => typeof v === 'boolean',
 };

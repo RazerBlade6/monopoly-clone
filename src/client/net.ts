@@ -144,6 +144,9 @@ class RoomConnection {
           this.patch({ playerId: null, error: null });
           break;
         }
+        // A refused join (name taken, room full) must not be replayed by the reconnect
+        // path; the form's next submit sets a fresh name.
+        if (!this.snapshot.playerId) this.pendingName = null;
         this.patch({ error: msg.message });
         break;
     }

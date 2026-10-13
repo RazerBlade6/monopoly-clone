@@ -504,6 +504,9 @@ button, input, select {
 }
 /* The dice sit centred in the space above the log rather than pinned to the top edge. */
 .board__stage {
+  /* Containing block for the drawn-card popup, so it covers the stage and not the log. */
+  position: relative;
+  width: 100%;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -590,9 +593,10 @@ button, input, select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   gap: 0.35rem;
   padding: calc(0.8rem * var(--tile-scale, 1));
+  overflow-y: auto; /* long card text scrolls inside a small stage instead of spilling out */
   background: var(--surface);
   border: 1px solid var(--accent);
   border-radius: var(--radius);

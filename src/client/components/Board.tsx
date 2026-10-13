@@ -340,9 +340,9 @@ export function Board({
       <div className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
         <div className="board__center-inner">
           {/* The dice sit centred in the space above the log rather than pinned to the
-              top edge. The popup stays a sibling of the stage, not a child: it is
-              `inset: 0` against `board__center-inner`, and inside the stage it would
-              shrink to the dice. */}
+              top edge. The card popup lives inside the stage (`position: relative`) so it
+              covers just that area and leaves the log readable; being absolutely
+              positioned with `inset: 0`, it fills the stage rather than shrinking to the dice. */}
           <div className="board__stage">
             {state.lastRoll && (
               <div className="board__dice">
@@ -354,9 +354,9 @@ export function Board({
             {state.vacationPot > 0 && (
               <div className="board__vacation-pot">Vacation pot: ${state.vacationPot}</div>
             )}
+            {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
           </div>
           <EventLog events={events} players={state.players} limit={6} />
-          {drawnCard && <DrawnCardPanel event={drawnCard} players={state.players} />}
         </div>
       </div>
     </div>
