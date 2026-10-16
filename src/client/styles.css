@@ -473,6 +473,9 @@ button, input, select {
    percentage already renders it 1.5x larger. */
 .tile__icon { font-size: 30cqmin; line-height: 1; }
 .tile--corner .tile__icon { font-size: 40cqmin; }
+/* The prison is the one corner a token lives on for turns at a time, so its cage is drawn
+   to fill the corner rather than sit small under the name. */
+.tile--jail .tile__icon { font-size: 64cqmin; }
 .tile__sub { color: var(--text); font-weight: 700; }
 .tile__price { color: var(--muted); font-size: 17cqmin; }
 .tile--corner .tile__name { font-weight: 700; }
@@ -604,6 +607,16 @@ button, input, select {
    while it moves, so the token everyone is following never fades out mid-walk. Only opacity
    and filter animate here; the body's transform belongs to Framer. */
 .token--turn:not(.token--moving) .token__body { animation: token-blink 1.2s ease-in-out infinite; }
+/* Bars drawn over the whole token, a little wider than it, for a player serving time. */
+.token__cage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 1.15em;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: drop-shadow(0 0 0.04em rgba(0,0,0,0.9));
+}
 @keyframes token-blink {
   0%, 100% { opacity: 1; filter: brightness(1.1); }
   50% { opacity: 0.5; filter: brightness(1); }

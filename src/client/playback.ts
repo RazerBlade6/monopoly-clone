@@ -270,6 +270,12 @@ export function usePlayback(map: GameMap, state: GameState, events: readonly Gam
           if (!(await sleep((JUMP_OUT_S + JUMP_IN_S) * 1000))) return;
           break;
         }
+        case 'left_jail': {
+          // Out before the walk starts, so the cage doesn't ride along.
+          shown = patchPlayer(shown, e.playerId, { inJail: false });
+          update({ state: shown, ...reveal([e]) });
+          break;
+        }
         case 'card_drawn': {
           showCard(e);
           update(reveal([e]));

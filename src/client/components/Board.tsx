@@ -374,10 +374,12 @@ function Token({
         <motion.span
           className="token__body"
           style={{ scale: bodyScale, background: player.color }}
-          title={player.name}
+          title={player.inJail ? `${player.name} (in prison)` : player.name}
         >
           <span className="token__eye" />
           <span className="token__eye" />
+          {/* Behind bars: the one thing that tells a prisoner from a visitor on the same corner. */}
+          {player.inJail && <span className="token__cage"><Icon name="prison" /></span>}
         </motion.span>
       </motion.div>
     </motion.div>
@@ -535,7 +537,7 @@ function BoardTile({
 
   return (
     <div
-      className={`tile tile--${tile.type} tile--o-${orient}${isCorner ? ' tile--corner' : ''}${onClick ? ' tile--clickable' : ''}`}
+      className={`tile tile--${tile.type} tile--o-${orient}${isCorner ? ' tile--corner' : ''}${tile.type === 'corner' ? ` tile--${tile.subtype}` : ''}${onClick ? ' tile--clickable' : ''}`}
       style={{ gridRow: row, gridColumn: col, backgroundImage: tile.type === 'city' ? countryTint(tile.countryId) : undefined }}
       title={tile.name}
       {...(onClick ? {
