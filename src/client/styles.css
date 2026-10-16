@@ -543,8 +543,8 @@ button, input, select {
   inset: 0;
   pointer-events: none;
 }
-/* A zero-size anchor at the token's standing point, with the shadow, the turn ring and the
-   body all centred on it. Its scale is the crowd's (smaller when a tile is shared); the
+/* A zero-size anchor at the token's standing point, with the shadow and the body both
+   centred on it. Its scale is the crowd's (smaller when a tile is shared); the
    body's own scale swells with speed while it moves.
    Sized off the board (`cqmin`), with everything inside in `em`: roughly two thirds of a
    side tile's short axis on any board size. */
@@ -599,28 +599,17 @@ button, input, select {
   border-radius: 50%;
   background: #111820;
 }
-/* Whose turn it is, read off the board rather than the sidebar: rings in their colour
-   rippling out from under the token. Two run half a cycle apart, so one is always on its
-   way out as the other starts, and the ripple reads as continuous rather than a pulse. */
-.token__ring {
-  position: absolute;
-  left: -0.75em;
-  top: -0.75em;
-  width: 1.5em;
-  height: 1.5em;
-  border-radius: 50%;
-  border: 0.09em solid;
-  opacity: 0;
-  animation: token-ring 0.9s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
-}
-.token__ring--late { animation-delay: -0.45s; }
-@keyframes token-ring {
-  0% { transform: scale(0.72); opacity: 0.95; }
-  100% { transform: scale(1.4); opacity: 0; }
+/* Whose turn it is, read off the board rather than the sidebar: the token itself breathes,
+   dimming to half and coming back a touch brighter than its resting colour. It holds steady
+   while it moves, so the token everyone is following never fades out mid-walk. Only opacity
+   and filter animate here; the body's transform belongs to Framer. */
+.token--turn:not(.token--moving) .token__body { animation: token-blink 1.2s ease-in-out infinite; }
+@keyframes token-blink {
+  0%, 100% { opacity: 1; filter: brightness(1.1); }
+  50% { opacity: 0.5; filter: brightness(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .token__ring { animation: none; transform: scale(1.1); opacity: 0.9; }
-  .token__ring--late { display: none; }
+  .token--turn .token__body { animation: none; box-shadow: 0 0 0 0.08em #fff, 0 0 0.3em rgba(255,255,255,0.6); }
 }
 
 .board__center {

@@ -366,14 +366,11 @@ function Token({
 
   return (
     <motion.div className="token-track" style={{ x: tx, y: ty, zIndex: moving ? 3 : isCurrent ? 2 : 1 }}>
-      <motion.div className={`token${isCurrent ? ' token--turn' : ''}`} style={{ scale: anchorScale }}>
+      <motion.div
+        className={`token${isCurrent ? ' token--turn' : ''}${moving ? ' token--moving' : ''}`}
+        style={{ scale: anchorScale }}
+      >
         <span className="token__shadow" />
-        {isCurrent && (
-          <>
-            <span className="token__ring" style={{ borderColor: player.color }} />
-            <span className="token__ring token__ring--late" style={{ borderColor: player.color }} />
-          </>
-        )}
         <motion.span
           className="token__body"
           style={{ scale: bodyScale, background: player.color }}
