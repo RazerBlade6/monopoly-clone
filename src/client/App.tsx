@@ -8,31 +8,28 @@ import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { getMap } from './mapSource';
 import { fixtureEvents, fixtureGameState, fixtureRoomMeta, fixturePlayers } from './fixtures';
+import { SimLab } from './devSim';
 
 const MAP_IDS: readonly MapId[] = ['classic', 'mr-worldwide', 'death-valley', 'lucky-wheel'];
 
 /**
- * Drip-feeds the fixture event log in after mount, then a second roll, instead
- * of rendering them from the first frame — the card popup and dice tumble
- * both key off a `card_drawn`/`rolled` event actually arriving in `events`
- * (see `useBoardEventEffects` in Board.tsx), so a static fixture wouldn't
- * exercise either. The second roll pairs a `state.lastRoll` update with a
- * `rolled` event, same as the real server does for one action. Dev-only; no
- * server involved.
+ * The fixture's log as history from the first frame, then one roll a moment later. The
+ * board animates only what arrives with a new state (see `usePlayback`), so the roll pairs
+ * a `rolled` event with a state update, as the real server sends them. Dev-only; no server
+ * involved. For whole turns played out on the real engine, see `?dev=sim`.
  */
 function useAnimatedFixture(mapId: MapId): { state: GameState; events: readonly GameEvent[] } {
   const [state, setState] = useState(() => fixtureGameState(mapId));
-  const [events, setEvents] = useState<readonly GameEvent[]>([]);
+  const [events, setEvents] = useState<readonly GameEvent[]>(fixtureEvents);
 
   useEffect(() => {
     setState(fixtureGameState(mapId));
-    setEvents([]);
-    const t1 = setTimeout(() => setEvents(fixtureEvents()), 700);
-    const t2 = setTimeout(() => {
-      setState(s => ({ ...s, lastRoll: [6, 2] }));
+    setEvents(fixtureEvents());
+    const t = setTimeout(() => {
       setEvents(es => [...es, { type: 'rolled', playerId: 'p2', dice: [6, 2], isDouble: false }]);
-    }, 1800);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+      setState(s => ({ ...s, lastRoll: [6, 2] }));
+    }, 1200);
+    return () => clearTimeout(t);
   }, [mapId]);
 
   return { state, events };
@@ -61,8 +58,16 @@ function withTurn(map: GameMap, state: GameState, turn: string | null): GameStat
  *   /?dev=join         (the lobby before entering a name)
  *   /?dev=game
  *   /?dev=game&turn=buy  (also: doubles, buy-doubles, end, jail, debt — the turn's buttons)
+ *   /?dev=sim          (the real engine, every seat played from this tab; &auto=1 for bots)
  */
 function DevPreview({ mode, mapId }: { mode: string; mapId: MapId }) {
+  if (mode === 'sim') {
+    return <SimLab mapId={mapId} auto={new URLSearchParams(window.location.search).get('auto') === '1'} />;
+  }
+  return <FixturePreview mode={mode} mapId={mapId} />;
+}
+
+function FixturePreview({ mode, mapId }: { mode: string; mapId: MapId }) {
   const { state, events } = useAnimatedFixture(mapId);
 
   if (mode === 'board') {

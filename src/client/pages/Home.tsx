@@ -1,10 +1,41 @@
 import { useState, type FormEvent } from 'react';
+import type { MapId } from '../../shared/types';
 import { navigate } from '../router';
+import { useDevMode } from '../devMode';
+import { MAPS } from '../../data/maps';
+
+/**
+ * Developer shortcuts, shown in a Vite dev build or with the dev switch (Ctrl+Alt+D) on —
+ * the switch is what makes it reachable when the built client is served by `wrangler dev`.
+ * The simulation runs the real engine in the page with no server (see `devSim.tsx`).
+ */
+function DevPanel() {
+  const [mapId, setMapId] = useState<MapId>('classic');
+  const [bots, setBots] = useState(true);
+  const start = () => {
+    window.location.assign(`/?dev=sim&map=${mapId}${bots ? '&auto=1' : ''}`);
+  };
+  return (
+    <div className="home__card home__dev">
+      <div className="panel__title">Developer</div>
+      <div className="home__dev-row">
+        <select className="input" value={mapId} onChange={e => setMapId(e.target.value as MapId)} aria-label="Map">
+          {Object.values(MAPS).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+        <label className="home__dev-toggle">
+          <input type="checkbox" checked={bots} onChange={e => setBots(e.target.checked)} /> Bots play
+        </label>
+      </div>
+      <button className="btn btn--big" onClick={start}>Simulate a game</button>
+    </div>
+  );
+}
 
 export function Home() {
   const [joinCode, setJoinCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dev = useDevMode() || import.meta.env.DEV;
 
   async function createRoom() {
     setCreating(true);
@@ -48,6 +79,7 @@ export function Home() {
           <button className="btn" type="submit" disabled={!joinCode.trim()}>Join</button>
         </form>
       </div>
+      {dev && <DevPanel />}
       {/* Attribution the licences ask for; the full texts are served from `public/`. */}
       <footer className="home__credits">
         Flags by <a href="https://github.com/HatScripts/circle-flags" target="_blank" rel="noreferrer">circle-flags</a> (MIT)
