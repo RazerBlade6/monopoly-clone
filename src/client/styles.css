@@ -511,36 +511,60 @@ button, input, select {
 .tile__buildings { font-size: 12cqmin; line-height: 1; display: flex; justify-content: center; gap: 1cqmin; }
 .tile--o-left .tile__buildings, .tile--o-right .tile__buildings { writing-mode: horizontal-tb; }
 .tile--o-left .tile__buildings { transform: rotate(180deg); }
-/* Tokens live in their own full-grid overlay (`.board__tokens-layer`, placed
-   as a sibling of the tile cells) rather than inside each tile, so a move
-   between tiles is one element's `left`/`top` transitioning smoothly instead
-   of an unmount/remount jump. `pointer-events: none` on the layer keeps it
-   from swallowing clicks over the tiles it overlaps; individual tokens opt
-   back in so their name still shows on hover. */
+/* Tokens live in their own full-grid overlay (`.board__tokens-layer`, placed as a sibling
+   of the tile cells) rather than inside each tile, so a move between tiles is one element
+   travelling instead of an unmount/remount jump. `pointer-events: none` keeps the layer
+   from swallowing clicks over the tiles it overlaps; each token's body opts back in so its
+   name still shows on hover. */
 .board__tokens-layer {
   position: relative;
   pointer-events: none;
   z-index: 6;
 }
+/* As big as the whole layer, so Framer's `x`/`y` percentages (of the element's own box)
+   are percentages of the board. Only its transform ever changes. */
+.token-track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* A zero-size anchor at the token's standing point. The shadow, the turn ring and the body
+   are all centred on it, so lifting the body for a hop leaves the shadow on the felt.
+   Sized off the board (`cqmin`), with everything inside in `em`: roughly two thirds of a
+   side tile's short axis on any board size. */
 .token {
   position: absolute;
-  transform: translate(-50%, -50%);
-  /* Sized off the board (`cqmin`), with the face laid out in `em` so eyes and pupils
-     follow. Roughly two thirds of a side tile's short axis on any board size. */
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
   font-size: 4.4cqmin;
+}
+.token__body {
+  position: absolute;
+  left: -0.5em;
+  top: -0.5em;
   width: 1em;
   height: 1em;
   border-radius: 50%;
   border: 2px solid rgba(0,0,0,0.45);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.65), inset 0 -4px 8px rgba(0,0,0,0.22);
+  box-shadow: inset 0 -0.12em 0.22em rgba(0,0,0,0.25), inset 0 0.08em 0.12em rgba(255,255,255,0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.05em;
   pointer-events: auto;
-  /* One step of the ring walk. Must stay under `useWalkedTile`'s interval or a
-     fast walk would still be sliding when the next step is set. */
-  transition: left 0.12s linear, top 0.12s linear;
+  /* Squash and stretch happen against the felt, not around the middle. */
+  transform-origin: 50% 100%;
+}
+.token__shadow {
+  position: absolute;
+  left: -0.46em;
+  top: 0.26em;
+  width: 0.92em;
+  height: 0.36em;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.75), rgba(0,0,0,0));
 }
 .token__eye {
   width: 0.27em;
@@ -561,15 +585,25 @@ button, input, select {
   border-radius: 50%;
   background: #111820;
 }
-/* Whose turn it is, read off the board rather than the sidebar. */
-.token--turn { animation: token-pulse 1.1s ease-in-out infinite; }
-@keyframes token-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+/* Whose turn it is, read off the board rather than the sidebar: a ring in their colour that
+   keeps rippling out from under the token. It replaces a blink, which made the very token
+   everyone should be watching flicker out of sight half the time. */
+.token__ring {
+  position: absolute;
+  left: -0.75em;
+  top: -0.75em;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  border: 0.09em solid;
+  animation: token-ring 1.6s ease-out infinite;
+}
+@keyframes token-ring {
+  0% { transform: scale(0.7); opacity: 0.95; }
+  100% { transform: scale(1.35); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .token--turn { animation: none; box-shadow: 0 0 0 3px var(--accent); }
-  .token { transition: none; }
+  .token__ring { animation: none; transform: scale(1.1); opacity: 0.9; }
 }
 
 .board__center {
@@ -624,14 +658,13 @@ button, input, select {
   height: var(--die-size);
   perspective: 600px;
 }
-/* A real cube rather than a flat face: six pipped sides pinned around the centre,
-   spun by transitioning to a rotation several whole turns past its resting one. */
+/* A real cube rather than a flat face: six pipped sides pinned around the centre. Framer
+   turns it (see `Die` in Board.tsx); nothing here animates. */
 .die__cube {
   position: relative;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.9s cubic-bezier(0.18, 0.86, 0.24, 1);
 }
 .die__face {
   position: absolute;
@@ -652,9 +685,6 @@ button, input, select {
 .die__face--2 { transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__face--5 { transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__pip { border-radius: 50%; background: #1a1f2b; }
-@media (prefers-reduced-motion: reduce) {
-  .die__cube { transition: none; }
-}
 .board__phase {
   font-size: calc(1rem * var(--tile-scale, 1));
   letter-spacing: 0.04em;
@@ -867,6 +897,11 @@ button, input, select {
   max-width: 100%;
 }
 .action-bar__buttons {
+  /* A fieldset, so one `disabled` holds every button while the board catches up. */
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;

@@ -12,7 +12,7 @@ import { phaseAfterLanding } from '../../engine/debt';
  * after doubles, both pass on the property (see `passOnPurchase` in the reducer).
  */
 export function ActionBar({
-  map, state, myPlayerId, actingPlayerId, onAction,
+  map, state, myPlayerId, actingPlayerId, onAction, busy = false,
 }: {
   map: GameMap;
   state: GameState;
@@ -21,6 +21,10 @@ export function ActionBar({
   /** The seat these buttons act for, which is a dummy of mine whenever the game waits on one. */
   actingPlayerId: PlayerId;
   onAction: (action: GameAction) => void;
+  /** The board is still playing the last update. The buttons hold until it has shown the
+   * result they belong to; `state` is the shown one, so they would otherwise offer the
+   * turn as it stood before the dice landed. */
+  busy?: boolean;
 }) {
   const me = state.players.find(p => p.id === actingPlayerId);
   const currentPlayerId = state.turnOrder[state.currentPlayerIndex];
@@ -65,7 +69,7 @@ export function ActionBar({
     // Passing on the property is whatever the turn would do next had there been no offer.
     const rollsAgain = phaseAfterLanding(state) === 'AWAITING_ROLL';
     phaseContent = (
-      <div className="action-bar__buttons">
+      <fieldset className="action-bar__buttons" disabled={busy}>
         {state.phase === 'AWAITING_ROLL' && (
           <>
             <button className="btn btn--primary btn--turn" onClick={() => onAction({ type: 'roll' })}>{rollLabel}</button>
@@ -100,7 +104,7 @@ export function ActionBar({
         {state.phase === 'AWAITING_END_TURN' && (
           <button className="btn btn--primary btn--turn" onClick={() => onAction({ type: 'end_turn' })}>End turn</button>
         )}
-      </div>
+      </fieldset>
     );
   }
 
