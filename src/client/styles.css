@@ -473,9 +473,47 @@ button, input, select {
    percentage already renders it 1.5x larger. */
 .tile__icon { font-size: 30cqmin; line-height: 1; }
 .tile--corner .tile__icon { font-size: 40cqmin; }
-/* The prison is the one corner a token lives on for turns at a time, so its cage is drawn
-   to fill the corner rather than sit small under the name. */
-.tile--jail .tile__icon { font-size: 64cqmin; }
+/* The prison corner, split: a dark cell in the inner angle (the cage over it lives in the
+   token layer, `.board__cage`), and "Passing by" along the band on the outer edge. */
+.tile__cell {
+  position: absolute;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.35);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.tile__passing {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  /* Hugging the outer edge, so a visitor standing in the band covers as little of it as
+     possible. */
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2cqmin;
+  font-size: 10cqmin;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.board__cage {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 3px;
+}
+/* The icon draws its bars inside a margin of its own (about 7% at the sides and 11% top and
+   bottom of its square), so it is stretched past the cell's box until the frame meets the
+   cell's edges, and the cell clips the overhang. */
+.board__cage .icon-img {
+  position: absolute;
+  left: -8%;
+  top: -12%;
+  width: 116%;
+  height: 124%;
+  max-width: none;
+}
 .tile__sub { color: var(--text); font-weight: 700; }
 .tile__price { color: var(--muted); font-size: 17cqmin; }
 .tile--corner .tile__name { font-weight: 700; }
@@ -607,16 +645,6 @@ button, input, select {
    while it moves, so the token everyone is following never fades out mid-walk. Only opacity
    and filter animate here; the body's transform belongs to Framer. */
 .token--turn:not(.token--moving) .token__body { animation: token-blink 1.2s ease-in-out infinite; }
-/* Bars drawn over the whole token, a little wider than it, for a player serving time. */
-.token__cage {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  font-size: 1.15em;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  filter: drop-shadow(0 0 0.04em rgba(0,0,0,0.9));
-}
 @keyframes token-blink {
   0%, 100% { opacity: 1; filter: brightness(1.1); }
   50% { opacity: 0.5; filter: brightness(1); }

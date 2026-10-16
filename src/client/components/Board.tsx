@@ -160,19 +160,82 @@ function crowdLayout(count: number) {
 type Spot = readonly [number, number];
 /** Where a token stands on the layer, in percent of it, and the scale it is drawn at. */
 interface Placement { spot: Spot; scale: number; corner: boolean }
-type SpotOf = (tileIndex: number, index?: number, count?: number) => Placement;
+type SpotOf = (tileIndex: number, index?: number, count?: number, inCell?: boolean) => Placement;
+
+/** A token's diameter in percent of the board: `.token`'s font-size is 4.4cqmin of it. */
+const TOKEN_PCT = 4.4;
+/**
+ * The prison corner is split the way richup splits it: a square cell in the corner's inner
+ * angle, this share of the corner on each side, and an L-shaped "passing by" band along the
+ * two outer edges. The band is what is left, deep enough for one full-size token.
+ */
+export const JAIL_CELL = 0.6;
+const JAIL_BAND = 1 - JAIL_CELL;
+
+/**
+ * Points on the prison corner are given as (p, q): p is the distance from the corner's outer
+ * side edge, q from its outer top or bottom edge, both as fractions of the corner. That reads
+ * the same on whichever corner a map puts its prison, and this turns it into board percent.
+ */
+function cornerPoint(pos: GridPos, tracks: readonly number[], p: number, q: number): Spot {
+  const col = trackSpan(tracks, pos.col);
+  const row = trackSpan(tracks, pos.row);
+  const x = pos.col === 1 ? p : 1 - p;
+  const y = pos.row === 1 ? q : 1 - q;
+  return [col.centre - col.size / 2 + x * col.size, row.centre - row.size / 2 + y * row.size];
+}
+
+/**
+ * Visitors stand in the band. One stands in its outer corner; two take an arm each; more
+ * alternate between the two arms, spaced evenly along each, with the outer corner used
+ * when the count is odd. They shrink only as far as the spacing along an arm needs.
+ */
+function passingBySlot(index: number, count: number, cornerPct: number): { p: number; q: number; scale: number } {
+  const perArm = Math.floor(count / 2);
+  const outer = count % 2 === 1;
+  const spacing = perArm > 0 ? (JAIL_CELL * cornerPct) / perArm : Infinity;
+  const scale = Math.min(1, (0.95 * Math.min(spacing, JAIL_BAND * cornerPct)) / TOKEN_PCT);
+  const mid = JAIL_BAND / 2;
+  if (outer && index === 0) return { p: mid, q: mid, scale };
+  const k = outer ? index - 1 : index;
+  const along = JAIL_BAND + ((Math.floor(k / 2) + 0.5) * JAIL_CELL) / Math.max(perArm, 1);
+  return k % 2 === 0 ? { p: along, q: mid, scale } : { p: mid, q: along, scale };
+}
+
+/** Prisoners stand in a small square grid inside the cell, shrinking to fit it. */
+function cellSlot(index: number, count: number, cornerPct: number): { p: number; q: number; scale: number } {
+  const cols = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / cols);
+  const scale = Math.min(1, (0.9 * JAIL_CELL * cornerPct) / cols / TOKEN_PCT);
+  const c = index % cols;
+  const r = Math.floor(index / cols) + (cols - rows) / 2;
+  return { p: JAIL_BAND + (JAIL_CELL * (c + 0.5)) / cols, q: JAIL_BAND + (JAIL_CELL * (r + 0.5)) / cols, scale };
+}
+
+/** The cell's box on the board, in percent, for the cage drawn over it. */
+function jailCellRect(pos: GridPos, tracks: readonly number[]) {
+  const [x1, y1] = cornerPoint(pos, tracks, JAIL_BAND, JAIL_BAND);
+  const [x2, y2] = cornerPoint(pos, tracks, 1, 1);
+  return { left: Math.min(x1, x2), top: Math.min(y1, y2), width: Math.abs(x2 - x1), height: Math.abs(y2 - y1) };
+}
 
 /**
  * Tokens stand in the middle of their tile, spread out when they share it. Corner tracks
  * are wider than side tracks, so each offset is measured against the track the tile
  * actually sits in, not one uniform cell.
  */
-function spotFinder(positions: readonly GridPos[], tracks: readonly number[]): SpotOf {
-  return (tileIndex, index = 0, count = 1) => {
+function spotFinder(positions: readonly GridPos[], tracks: readonly number[], jailIndex: number): SpotOf {
+  return (tileIndex, index = 0, count = 1, inCell = false) => {
     const pos = positions[tileIndex];
     if (!pos) return { spot: [50, 50], scale: 1, corner: false };
     const col = trackSpan(tracks, pos.col);
     const row = trackSpan(tracks, pos.row);
+    // The prison has its own two places to stand. A token walking past goes round through
+    // the band too, since its single-token spot is the band's outer corner.
+    if (tileIndex === jailIndex && pos.isCorner) {
+      const { p, q, scale } = (inCell ? cellSlot : passingBySlot)(index, count, col.size);
+      return { spot: cornerPoint(pos, tracks, p, q), scale, corner: true };
+    }
     const { scale, cells } = crowdLayout(count);
     const [u, v] = cells[index] ?? [0, 0];
     // The left and right runs lie on their side: along the edge is down the screen.
@@ -364,8 +427,12 @@ function Token({
 
   useEffect(() => () => stopAll(), []);
 
+  // A prisoner stays under the cage (`CAGE_LAYER`), even popping into the cell; everyone
+  // else is drawn over it, and a moving token over everything.
+  const layer = player.inJail ? (isCurrent ? 2 : 1) : moving ? 6 : isCurrent ? 5 : 4;
+
   return (
-    <motion.div className="token-track" style={{ x: tx, y: ty, zIndex: moving ? 3 : isCurrent ? 2 : 1 }}>
+    <motion.div className="token-track" style={{ x: tx, y: ty, zIndex: layer }}>
       <motion.div
         className={`token${isCurrent ? ' token--turn' : ''}${moving ? ' token--moving' : ''}`}
         style={{ scale: anchorScale }}
@@ -378,41 +445,57 @@ function Token({
         >
           <span className="token__eye" />
           <span className="token__eye" />
-          {/* Behind bars: the one thing that tells a prisoner from a visitor on the same corner. */}
-          {player.inJail && <span className="token__cage"><Icon name="prison" /></span>}
         </motion.span>
       </motion.div>
     </motion.div>
   );
 }
 
+/** Between prisoners (1–2) and every other token (4–6). */
+const CAGE_LAYER = 3;
+
 function TokenLayer({
-  tracks, positions, players, currentPlayerId, motions,
+  tracks, positions, players, currentPlayerId, motions, jailIndex,
 }: {
   tracks: readonly number[];
   positions: readonly GridPos[];
   players: readonly Player[];
   currentPlayerId: string | undefined;
   motions: Presentation['motions'];
+  jailIndex: number;
 }) {
-  const spotOf = spotFinder(positions, tracks);
+  const spotOf = spotFinder(positions, tracks, jailIndex);
   const live = players.filter(p => !p.bankrupt);
-  const byTile = new Map<number, Player[]>();
+  // Prisoners and visitors share a tile but not a crowd: each lays out in its own space.
+  const inCell = (p: Player) => p.inJail && p.tileIndex === jailIndex;
+  const groupKey = (p: Player) => `${p.tileIndex}${inCell(p) ? ':cell' : ''}`;
+  const groups = new Map<string, Player[]>();
   for (const p of live) {
-    const arr = byTile.get(p.tileIndex) ?? [];
+    const arr = groups.get(groupKey(p)) ?? [];
     arr.push(p);
-    byTile.set(p.tileIndex, arr);
+    groups.set(groupKey(p), arr);
   }
+  const jailPos = positions[jailIndex];
+  const cage = jailPos?.isCorner ? jailCellRect(jailPos, tracks) : null;
 
   return (
     <div className="board__tokens-layer" style={{ gridRow: `1 / -1`, gridColumn: `1 / -1` }}>
+      {/* Bars over the whole cell, so whoever is inside shows through them. */}
+      {cage && (
+        <div
+          className="board__cage"
+          style={{ left: `${cage.left}%`, top: `${cage.top}%`, width: `${cage.width}%`, height: `${cage.height}%`, zIndex: CAGE_LAYER }}
+        >
+          <Icon name="prison" />
+        </div>
+      )}
       {live.map(p => {
-        const group = byTile.get(p.tileIndex) ?? [p];
+        const group = groups.get(groupKey(p)) ?? [p];
         return (
           <Token
             key={p.id}
             player={p}
-            place={spotOf(p.tileIndex, group.indexOf(p), group.length)}
+            place={spotOf(p.tileIndex, group.indexOf(p), group.length, inCell(p))}
             motion={motions[p.id]}
             spotOf={spotOf}
             isCurrent={p.id === currentPlayerId}
@@ -486,6 +569,7 @@ export function Board({
         players={state.players}
         currentPlayerId={state.turnOrder[state.currentPlayerIndex]}
         motions={motions}
+        jailIndex={map.jailIndex}
       />
       <div ref={middleRef} className="board__center" style={{ gridRow: `2 / ${side}`, gridColumn: `2 / ${side}` }}>
         <div className="board__center-inner">
@@ -534,6 +618,7 @@ function BoardTile({
   // Corners read upright; the four runs read along their own edge, which is what
   // buys side tiles enough room for a full city name instead of an ellipsis.
   const orient = isCorner ? 'corner' : edge;
+  const isJail = isCorner && tile.type === 'corner' && tile.subtype === 'jail';
 
   return (
     <div
@@ -557,6 +642,7 @@ function BoardTile({
           outer rim. A city's flag is not in this flow at all — it sits on the tile's inner
           border, half over the board's middle (see `.tile__flag`), which leaves the whole
           depth of the tile for the words. Other tiles keep their icon in the flow. */}
+      {isJail ? <JailCorner row={row} col={col} /> : (
       <div className="tile__inner">
         {tile.type !== 'city' && <div className="tile__icon"><TileIcon tile={tile} /></div>}
         <div className="tile__text">
@@ -572,8 +658,37 @@ function BoardTile({
           )}
         </div>
       </div>
+      )}
       {tile.type === 'city' && <div className="tile__flag"><FlagImage tile={tile} /></div>}
       {owner && <div className="tile__owner" style={{ background: owner.color }} title={owner.name} />}
     </div>
+  );
+}
+
+/**
+ * The prison corner's face: the cell in the corner's inner angle, and "Passing by" along the
+ * band's outer edge. The cage itself is drawn in the token layer, over the cell, so that the
+ * prisoners standing in it show through the bars.
+ */
+function JailCorner({ row, col }: { row: number; col: number }) {
+  const cellSide = `${JAIL_CELL * 100}%`;
+  const bandSide = `${JAIL_BAND * 100}%`;
+  return (
+    <>
+      <div
+        className="tile__cell"
+        style={{
+          width: cellSide, height: cellSide,
+          ...(col === 1 ? { right: 0 } : { left: 0 }),
+          ...(row === 1 ? { bottom: 0 } : { top: 0 }),
+        }}
+      />
+      <div
+        className="tile__passing"
+        style={{ height: bandSide, ...(row === 1 ? { top: 0 } : { bottom: 0, alignItems: 'flex-end', paddingTop: 0, paddingBottom: '2cqmin' }) }}
+      >
+        Passing by
+      </div>
+    </>
   );
 }
