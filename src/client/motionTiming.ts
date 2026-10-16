@@ -14,32 +14,24 @@ export const DICE_STAGGER_S = 0.07;
 /** How long the queue holds before the token sets off: the dice are still just settling. */
 export const DICE_SETTLE_MS = 1000;
 
-/** A hop from one tile to the next, at cruising pace. */
-const HOP_S = 0.24;
-/** The first hop is a push-off and the last a landing, so both take longer than cruising. */
-const FIRST_HOP_FACTOR = 1.35;
-const LAST_HOP_FACTOR = 1.55;
-/** A long card move speeds up so it is never a slog, but a hop never gets shorter than this. */
-const LONG_WALK_S = 3.2;
-const MIN_HOP_S = 0.1;
+/**
+ * A walk's length in seconds grows with the square root of the tiles covered: a long move
+ * covers far more ground than a short one in only a little more time, so the trip from the
+ * far side of the board back to START stays brisk while a one-tile step still reads as a
+ * move. 1 tile ≈ 0.4s, a typical roll of 7 ≈ 0.6s, the 30 to START ≈ 1.0s.
+ */
+const WALK_BASE_S = 0.26;
+const WALK_PER_ROOT_TILE_S = 0.13;
+
+export function walkSeconds(tiles: number): number {
+  return tiles <= 0 ? 0 : WALK_BASE_S + WALK_PER_ROOT_TILE_S * Math.sqrt(tiles);
+}
 
 /**
- * Seconds per hop for a walk of `count` tiles. A short walk (a dice roll) runs at the
- * cruising pace with a slower first and last hop, which is what makes the token speed up
- * and slow down over the walk rather than ticking along at one speed. A long walk (a card
- * that sends you most of the way round) shrinks the cruising hop so the whole walk fits
- * in `LONG_WALK_S`.
+ * The glide's easing: it pulls away hard (top speed within the first quarter of the walk)
+ * and spends the rest easing to a stop on the tile.
  */
-export function hopDurations(count: number): number[] {
-  if (count <= 0) return [];
-  const ends = count === 1 ? LAST_HOP_FACTOR : FIRST_HOP_FACTOR + LAST_HOP_FACTOR;
-  const middle = Math.max(0, count - 2);
-  const natural = (ends + middle) * HOP_S;
-  const hop = natural <= LONG_WALK_S ? HOP_S : Math.max(MIN_HOP_S, LONG_WALK_S / (ends + middle));
-  if (count === 1) return [hop * LAST_HOP_FACTOR];
-  return Array.from({ length: count }, (_, i) =>
-    i === 0 ? hop * FIRST_HOP_FACTOR : i === count - 1 ? hop * LAST_HOP_FACTOR : hop);
-}
+export const WALK_EASE = [0.3, 0, 0.12, 1] as const;
 
 /** A walk only ever goes backwards when a card says so (three back, on every map). */
 export const MAX_BACKWARD_WALK = 6;
@@ -56,4 +48,4 @@ export const CARD_READ_MS = 1600;
 export const CARD_SHOW_MS = 4500;
 
 /** A held breath between landing and the money changing hands, so the two read as cause and effect. */
-export const LAND_BEAT_MS = 180;
+export const LAND_BEAT_MS = 120;

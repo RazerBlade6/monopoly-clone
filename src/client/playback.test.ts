@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { walkPath } from './playback';
-import { hopDurations, MAX_BACKWARD_WALK } from './motionTiming';
+import { MAX_BACKWARD_WALK, walkSeconds } from './motionTiming';
 
 describe('walkPath', () => {
   it('walks forward, both ends included', () => {
@@ -28,25 +28,21 @@ describe('walkPath', () => {
   });
 });
 
-describe('hopDurations', () => {
-  it('has one duration per hop', () => {
-    for (const n of [1, 2, 7, 12, 39]) expect(hopDurations(n)).toHaveLength(n);
+describe('walkSeconds', () => {
+  it('takes no time to go nowhere', () => {
+    expect(walkSeconds(0)).toBe(0);
   });
 
-  it('starts and ends slower than it cruises', () => {
-    const hops = hopDurations(8);
-    const cruise = hops[3]!;
-    expect(hops[0]).toBeGreaterThan(cruise);
-    expect(hops[hops.length - 1]).toBeGreaterThan(hops[0]!);
-    expect(new Set(hops.slice(1, -1)).size).toBe(1);
+  it('takes longer the further it goes', () => {
+    for (let n = 1; n < 47; n++) expect(walkSeconds(n + 1)).toBeGreaterThan(walkSeconds(n));
   });
 
-  it('speeds a long walk up to fit the cap', () => {
-    const total = hopDurations(20).reduce((a, b) => a + b, 0);
-    expect(total).toBeCloseTo(3.2, 9);
+  it('covers ground faster the further it goes', () => {
+    expect(30 / walkSeconds(30)).toBeGreaterThan(3 * (7 / walkSeconds(7)) / 2);
   });
 
-  it('never makes a hop vanishingly short, even round the whole board', () => {
-    expect(Math.min(...hopDurations(47))).toBeGreaterThanOrEqual(0.1);
+  it('keeps an ordinary roll and a trip round the board brisk', () => {
+    expect(walkSeconds(7)).toBeLessThan(0.7);
+    expect(walkSeconds(39)).toBeLessThan(1.2);
   });
 });

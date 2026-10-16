@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameAction, GameEvent, GameState, MapId, PlayerId } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/types';
 import { createGame, legalActions, reduce } from '../engine';
+import { MAPS } from '../data/maps';
 import { getMap } from './mapSource';
 import { Game } from './pages/Game';
 
@@ -36,6 +37,32 @@ function botAction(state: GameState, legal: readonly GameAction[]): GameAction |
     if (found) return found;
   }
   return null;
+}
+
+/**
+ * The simulation plus a small bar to steer it without editing the URL: let the bots play
+ * or take the turns yourself, switch map, start over, or go home.
+ */
+export function SimLab({ mapId: initialMap, auto: initialAuto }: { mapId: MapId; auto: boolean }) {
+  const [mapId, setMapId] = useState(initialMap);
+  const [auto, setAuto] = useState(initialAuto);
+  const [run, setRun] = useState(0);
+  return (
+    <>
+      <SimulatedGame key={`${mapId}:${run}`} mapId={mapId} auto={auto} />
+      <div className="sim-bar" role="toolbar" aria-label="Simulation">
+        <span className="sim-bar__tag">Sim</span>
+        <label className="sim-bar__toggle">
+          <input type="checkbox" checked={auto} onChange={e => setAuto(e.target.checked)} /> Bots play
+        </label>
+        <select className="sim-bar__select" value={mapId} onChange={e => setMapId(e.target.value as MapId)} aria-label="Map">
+          {Object.values(MAPS).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+        <button className="btn btn--small" onClick={() => setRun(r => r + 1)}>New game</button>
+        <button className="btn btn--small" onClick={() => window.location.assign('/')}>Home</button>
+      </div>
+    </>
+  );
 }
 
 /**

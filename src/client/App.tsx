@@ -8,7 +8,7 @@ import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { getMap } from './mapSource';
 import { fixtureEvents, fixtureGameState, fixtureRoomMeta, fixturePlayers } from './fixtures';
-import { SimulatedGame } from './devSim';
+import { SimLab } from './devSim';
 
 const MAP_IDS: readonly MapId[] = ['classic', 'mr-worldwide', 'death-valley', 'lucky-wheel'];
 
@@ -62,7 +62,7 @@ function withTurn(map: GameMap, state: GameState, turn: string | null): GameStat
  */
 function DevPreview({ mode, mapId }: { mode: string; mapId: MapId }) {
   if (mode === 'sim') {
-    return <SimulatedGame mapId={mapId} auto={new URLSearchParams(window.location.search).get('auto') === '1'} />;
+    return <SimLab mapId={mapId} auto={new URLSearchParams(window.location.search).get('auto') === '1'} />;
   }
   return <FixturePreview mode={mode} mapId={mapId} />;
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameEvent, GameMap, GameState, Player, PlayerId } from '../shared/types';
 import {
   CARD_READ_MS, CARD_SHOW_MS, DICE_SETTLE_MS, JUMP_IN_S, JUMP_OUT_S, JUMP_PAUSE_MS,
-  LAND_BEAT_MS, MAX_BACKWARD_WALK, hopDurations,
+  LAND_BEAT_MS, MAX_BACKWARD_WALK, walkSeconds,
 } from './motionTiming';
 
 export type CardDrawnEvent = Extract<GameEvent, { type: 'card_drawn' }>;
@@ -11,12 +11,12 @@ export type CardDrawnEvent = Extract<GameEvent, { type: 'card_drawn' }>;
  * How a token gets to the tile the shown state now puts it on. `id` is unique per motion,
  * so a token runs each one exactly once however often the board re-renders.
  *
- * - `walk` hops along `path`, which starts on the tile the token is leaving.
+ * - `walk` glides along `path`, which starts on the tile the token is leaving, in `duration` seconds.
  * - `jump` shrinks away and pops up on the new tile (prison).
  * - `snap` just appears there: reduced motion, or the queue catching up all at once.
  */
 export type TokenMotion =
-  | { id: number; kind: 'walk'; path: readonly number[]; hops: readonly number[] }
+  | { id: number; kind: 'walk'; path: readonly number[]; duration: number }
   | { id: number; kind: 'jump' }
   | { id: number; kind: 'snap' };
 
@@ -251,9 +251,9 @@ export function usePlayback(map: GameMap, state: GameState, events: readonly Gam
             update({ state: shown, ...withMotion(e.playerId, { id: motionId(), kind: 'snap' }), ...reveal([e]) });
             break;
           }
-          const hops = hopDurations(path.length - 1);
-          update({ state: shown, ...withMotion(e.playerId, { id: motionId(), kind: 'walk', path, hops }) });
-          const walkMs = hops.reduce((a, b) => a + b, 0) * 1000;
+          const duration = walkSeconds(path.length - 1);
+          update({ state: shown, ...withMotion(e.playerId, { id: motionId(), kind: 'walk', path, duration }) });
+          const walkMs = duration * 1000;
           if (!(await sleep(walkMs + LAND_BEAT_MS))) return;
           update(reveal([e]));
           break;

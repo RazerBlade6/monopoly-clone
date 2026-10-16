@@ -113,6 +113,21 @@ button, input, select {
 .home__divider::before, .home__divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .home__divider span { padding: 0 0.75rem; }
 .home__join { display: flex; gap: 0.5rem; }
+.home__dev { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem 1.5rem; text-align: left; border-style: dashed; }
+.home__dev-row { display: flex; gap: 0.6rem; align-items: center; }
+.home__dev-row .input { flex: 1; padding: 0.5em 0.7em; }
+.home__dev-toggle { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+/* Floats over the bottom of the left rail in the simulation. */
+.sim-bar {
+  position: fixed; left: 0.6rem; bottom: 0.6rem; z-index: 40;
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.45rem 0.6rem; border-radius: 999px;
+  background: rgba(21, 17, 38, 0.92); border: 1px dashed var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45); font-size: 0.8rem;
+}
+.sim-bar__tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 800; padding-left: 0.3rem; }
+.sim-bar__toggle { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); }
+.sim-bar__select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.2em 0.4em; }
 .home__credits { color: var(--muted); font-size: 0.75rem; text-align: center; line-height: 1.5; }
 .home__credits a { color: inherit; }
 
@@ -528,8 +543,9 @@ button, input, select {
   inset: 0;
   pointer-events: none;
 }
-/* A zero-size anchor at the token's standing point. The shadow, the turn ring and the body
-   are all centred on it, so lifting the body for a hop leaves the shadow on the felt.
+/* A zero-size anchor at the token's standing point, with the shadow, the turn ring and the
+   body all centred on it. Its scale is the crowd's (smaller when a tile is shared); the
+   body's own scale swells with speed while it moves.
    Sized off the board (`cqmin`), with everything inside in `em`: roughly two thirds of a
    side tile's short axis on any board size. */
 .token {
@@ -554,8 +570,6 @@ button, input, select {
   justify-content: center;
   gap: 0.05em;
   pointer-events: auto;
-  /* Squash and stretch happen against the felt, not around the middle. */
-  transform-origin: 50% 100%;
 }
 .token__shadow {
   position: absolute;
@@ -585,9 +599,9 @@ button, input, select {
   border-radius: 50%;
   background: #111820;
 }
-/* Whose turn it is, read off the board rather than the sidebar: a ring in their colour that
-   keeps rippling out from under the token. It replaces a blink, which made the very token
-   everyone should be watching flicker out of sight half the time. */
+/* Whose turn it is, read off the board rather than the sidebar: rings in their colour
+   rippling out from under the token. Two run half a cycle apart, so one is always on its
+   way out as the other starts, and the ripple reads as continuous rather than a pulse. */
 .token__ring {
   position: absolute;
   left: -0.75em;
@@ -596,14 +610,17 @@ button, input, select {
   height: 1.5em;
   border-radius: 50%;
   border: 0.09em solid;
-  animation: token-ring 1.6s ease-out infinite;
+  opacity: 0;
+  animation: token-ring 0.9s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
 }
+.token__ring--late { animation-delay: -0.45s; }
 @keyframes token-ring {
-  0% { transform: scale(0.7); opacity: 0.95; }
-  100% { transform: scale(1.35); opacity: 0; }
+  0% { transform: scale(0.72); opacity: 0.95; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .token__ring { animation: none; transform: scale(1.1); opacity: 0.9; }
+  .token__ring--late { display: none; }
 }
 
 .board__center {
