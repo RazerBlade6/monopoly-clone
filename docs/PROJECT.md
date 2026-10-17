@@ -75,13 +75,6 @@ richup's vocabulary, used throughout the code and UI:
 
 Every change should leave `npm run check` clean and `npm test` passing.
 
-### Git workflow
-
-`dev` is the working branch. Each piece of work goes on a feature branch cut from `dev` and merges
-back into `dev`; feature branches are deleted afterwards. `master` is only updated on request:
-`origin` is a fork, its `master` is fast-forwarded to `dev`, and a pull request goes upstream from
-there.
-
 ## History
 
 | When | Milestone |

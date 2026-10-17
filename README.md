@@ -68,7 +68,7 @@ anti-collusion) in the lobby. Full rules are in [docs/ENGINE.md](docs/ENGINE.md)
 
 | Where | What |
 |---|---|
-| [docs/PROJECT.md](docs/PROJECT.md) | Product decisions, principles, IP rules, terminology, commands, git workflow, history |
+| [docs/PROJECT.md](docs/PROJECT.md) | Product decisions, principles, IP rules, terminology, commands, history |
 | [docs/ENGINE.md](docs/ENGINE.md) | The rules engine and every rule as implemented, with the decisions behind them |
 | [docs/SERVER.md](docs/SERVER.md) | The Worker and room Durable Object, protocol, lobby, persistence, deployment |
 | [docs/CLIENT.md](docs/CLIENT.md) | The React app: screens, board, playback queue, animation, assets, dev tools |
