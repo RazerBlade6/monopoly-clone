@@ -986,6 +986,16 @@ button, input, select {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 32px rgba(0,0,0,0.55);
   outline: none;
 }
+/* Grows out of the row or tile that was clicked (its middle is the transform origin). */
+.deed--open { animation: deed-open 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes deed-open {
+  from { transform: scale(0.3); opacity: 0; }
+  60% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deed--open { animation: deed-fade 0.12s ease-out both; }
+  @keyframes deed-fade { from { opacity: 0; } }
+}
 .deed__header {
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 0.05rem;
