@@ -991,7 +991,7 @@ button, input, select {
   display: flex;
   flex-direction: column;
 }
-.event-log__list { list-style: none; margin: 0; padding: 0; overflow-y: auto; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.event-log__list { position: relative; list-style: none; margin: 0; padding: 0; overflow-y: auto; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .event-log__item { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
 .event-log__empty { color: var(--muted); }
 

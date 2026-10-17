@@ -1,5 +1,20 @@
 import type { Card, GameEvent, GameMap, Player, PlayerId, Trade, TradeSide } from '../../shared/types';
 import { getCard } from '../../data/cards';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { LOG_ENTER_DELAY_S, LOG_ENTER_S, LOG_SHIFT_S } from '../motionTiming';
+
+/**
+ * A stable key per event, so a new line animates in and the rest slide rather than every
+ * line re-rendering under a shifted index. Events keep their identity in the log (the
+ * playback queue relies on the same), so object identity is the key.
+ */
+const eventKeys = new WeakMap<GameEvent, number>();
+let nextEventKey = 0;
+function keyOf(event: GameEvent): number {
+  let key = eventKeys.get(event);
+  if (key === undefined) eventKeys.set(event, (key = ++nextEventKey));
+  return key;
+}
 
 function nameOf(players: readonly Player[], id: PlayerId | null): string {
   if (!id) return 'the bank';
@@ -115,18 +130,36 @@ export function EventLog({
 }) {
   const trades = new Map<string, Trade>();
   for (const e of events) if (e.type === 'trade_proposed') trades.set(e.trade.id, e.trade);
+  const reduced = useReducedMotion();
   const recent = events
-    .map(e => formatEvent(e, players, map, trades))
-    .filter((line): line is string => line !== null)
+    .map(e => ({ key: keyOf(e), line: formatEvent(e, players, map, trades) }))
+    .filter((entry): entry is { key: number; line: string } => entry.line !== null)
     .slice(-limit)
     .reverse();
+  // A new line waits a beat while the others slide down to make room, then fades in. The
+  // oldest line drops out of the layout at once, so nothing waits on it to leave.
   return (
     <div className="event-log">
       <h3 className="event-log__title">Log</h3>
       <ul className="event-log__list">
-        {recent.map((line, i) => (
-          <li key={i} className="event-log__item">{line}</li>
-        ))}
+        <AnimatePresence initial={false} mode="popLayout">
+          {recent.map(({ key, line }) => (
+            <motion.li
+              key={key}
+              layout={reduced ? false : 'position'}
+              className="event-log__item"
+              initial={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.1 } }}
+              transition={{
+                duration: LOG_ENTER_S, delay: LOG_ENTER_DELAY_S, ease: 'easeOut',
+                layout: { duration: LOG_SHIFT_S, ease: 'easeOut' },
+              }}
+            >
+              {line}
+            </motion.li>
+          ))}
+        </AnimatePresence>
         {recent.length === 0 && <li className="event-log__empty">Nothing has happened yet.</li>}
       </ul>
     </div>
