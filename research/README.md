@@ -74,6 +74,7 @@ board tiles verified by rendering the PDF pages) with `rules-edge-cases.md` for 
 | `house-rules-common.md` | 1125 | House-rule catalogue, Hasbro's 2014 fan vote, game-length/balance analysis, landing probabilities | Toggle design, and bot AI priors (§3.4) |
 | `richup-rules-and-settings.md` | 264 | richup's settings schema read out of its shipped Zod validator | The **complete** settings key list, incl. keys the UI doesn't show |
 | `richup-ux-and-flow.md` | 741 | richup's screens, turn flow, auction/trade UI, turn clock, disconnect handling | Product/UX decisions |
+| `richup-motion-observed.md` | 124 | Dice throw, dice look, token glide and their timings, measured frame by frame from a screen recording (2026-10-17) | **All richup animation timing and feel.** Closes `richup-ux-and-flow.md`'s open question 9 |
 | `richup-vs-monopoly-diff.md` | 304 | Deviation table, terminology map, IP/legal notes | The diff, and §4 on what you must not copy |
 
 ---

@@ -14,7 +14,6 @@ const NO_PAYLOAD_ACTION_TYPES = new Set<GameAction['type']>([
   'start_game',
   'roll',
   'buy',
-  'decline_buy',
   'pay_jail_fee',
   'use_pardon',
   'end_turn',

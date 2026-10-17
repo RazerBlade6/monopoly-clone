@@ -21,7 +21,7 @@ by default, so a default v1 game is rule-complete). The engine **rejects** actio
 | 4 | **`RESOLVING_DEBT` is an explicit blocking phase.** Nobody rolls and the debtor can't end their turn until it clears. The debtor may sell buildings or properties, trade, or declare bankruptcy; everyone else may still trade, with the debtor included. |
 | 5 | **No auto-bankruptcy.** A debtor who can't raise the money declares bankruptcy themselves (`declare_bankruptcy`). It is the same action as a voluntary concession and runs the same settlement routine. |
 | 6 | **No rollback.** Building sales and trades made during `RESOLVING_DEBT` stand. Every dollar the debtor receives goes straight to the creditor(s) as it arrives. |
-| 12 | **Asset mutation is gated.** Buying/selling buildings is legal only on your own turn in `AWAITING_ROLL`, `AWAITING_END_TURN`, or when you are the debtor in `RESOLVING_DEBT`. Never between a roll and its resolution. |
+| 12 | **Asset mutation is gated.** Buying/selling buildings is legal only on your own turn in `AWAITING_ROLL`, `AWAITING_BUY`, `AWAITING_END_TURN`, or when you are the debtor in `RESOLVING_DEBT`. Never between a roll and its resolution. |
 | 13 | **Multi-creditor debt pays in turn order** starting from the player to the debtor's left (`Debt.queued`). Whatever the debtor has, and later receives, pays the first creditor in full before the next sees a dollar. Creditors keep what they were paid if the debtor goes bankrupt, and are owed nothing more. A creditor who goes bankrupt is written off the queue. |
 | 17 | Buyers of remaining houses have priority over hotel-breakers. A hotel breaks into 4 houses **only if the bank holds 4**; otherwise the only legal move is selling hotels across the whole group. |
 | 18 | **Building supply is finite: 32 houses / 12 hotels.** `unlimitedBuildings` is an off-by-default toggle. A hotel purchase returns exactly 4 houses to the pool. |
@@ -29,6 +29,7 @@ by default, so a default v1 game is rule-complete). The engine **rejects** actio
 | 27 | **Resolve the debt before moving the token.** Landing resolution completes, including any `RESOLVING_DEBT` excursion, before a forced move to jail. Debt amounts are snapshotted when incurred. |
 | 28 | **Earnings Tax is 10% of net worth** (richup's rule), where net worth = cash + printed price of every property owned + purchase price of every building. The START salary is already in hand when tax resolves. `netWorthForTax()` is a separate function from any endgame valuation. |
 | 29 | **Win = last player standing.** No timed mode in v1. |
+| 31 | **No decline action.** On an unowned property (`AWAITING_BUY`) the player buys it, or passes by doing what the turn would do next: `end_turn`, or `roll` after doubles. Without auctions, a separate decline step only added a click. The tile simply stays unowned. Building, selling and trading stay open while the offer stands, so a player can raise the money to buy. |
 | 30 | **Voluntary concession allowed** at any time, through the same bankruptcy routine. Bankruptcy never transfers anything to a player: buildings go back to the bank supply, every property becomes unowned again, and positive cash goes to the Bank. Conceding can't hand a leader anything. The `bankrupt` event's `creditor` is always `null`. |
 
 ## Debt

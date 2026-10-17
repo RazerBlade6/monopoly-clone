@@ -91,18 +91,23 @@ describe('sell_property', () => {
     expect(sell(state, 'p1', 999).error).toBeTruthy();
   });
 
-  it('refuses off-turn and outside the build window', () => {
+  it('refuses off-turn and once the game is over', () => {
     let state = started();
     state = updateTile(state, 6, { owner: 'p2' });
     state = updateTile(state, 13, { owner: 'p1' });
     expect(sell(state, 'p2', 6).error).toBe('Cannot sell right now');
+    expect(sell({ ...state, phase: 'GAME_OVER' }, 'p1', 13).error).toBeTruthy();
+  });
 
-    // p1 rolls 2+3 onto the unowned airport at 5: mid-move, not a sale window.
+  it('allows a sale while a purchase is on offer, to raise the money for it', () => {
+    let state = started();
+    state = updateTile(state, 13, { owner: 'p1' });
+    // p1 rolls 2+3 onto the unowned airport at 5.
     const buying = act(state, 'p1', { type: 'roll' }, queueRng([dieVal(2), dieVal(3)])).state;
     expect(buying.phase).toBe('AWAITING_BUY');
-    expect(sell(buying, 'p1', 13).error).toBe('Cannot sell right now');
-
-    expect(sell({ ...state, phase: 'GAME_OVER' }, 'p1', 13).error).toBeTruthy();
+    const sold = sell(buying, 'p1', 13);
+    expect(sold.error).toBeUndefined();
+    expect(sold.state.phase).toBe('AWAITING_BUY');
   });
 
   it("routes a debtor's proceeds to the creditor", () => {

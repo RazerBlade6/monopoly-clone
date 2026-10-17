@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, reduce } from './index';
+import { legalActions } from './legal';
 import { SMALL_MAP } from './fixtures';
 import { dieVal, identityRng, queueRng, settingsFor } from './fixtures';
 import { updatePlayer, walkForward } from './state';
@@ -39,7 +40,7 @@ describe('createGame / start_game', () => {
   });
 });
 
-describe('roll / move / buy / decline', () => {
+describe('roll / move / buy / pass', () => {
   it('a non-double roll moves the player and offers a buy on an unowned tile', () => {
     const started = startedGame();
     const currentId = started.turnOrder[started.currentPlayerIndex]!;
@@ -54,7 +55,7 @@ describe('roll / move / buy / decline', () => {
     expect(r.events.some((e) => e.type === 'moved')).toBe(true);
   });
 
-  it('buy transfers cash and ownership; decline leaves the tile unowned', () => {
+  it('buy transfers cash and ownership; ending the turn instead leaves the tile unowned', () => {
     const started = startedGame();
     const currentId = started.turnOrder[started.currentPlayerIndex]!;
     const rolled = reduce(SMALL_MAP, started, { playerId: currentId, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)])).state;
@@ -67,10 +68,62 @@ describe('roll / move / buy / decline', () => {
     expect(buyerCashAfter).toBe(started.settings.startingCash - price);
     expect(bought.state.phase).toBe('AWAITING_END_TURN');
 
-    // Decline path from a fresh identical roll: tile stays unowned.
-    const declined = reduce(SMALL_MAP, rolled, { playerId: currentId, action: { type: 'decline_buy' } }, identityRng);
-    expect(declined.state.tiles[3]!.owner).toBeNull();
-    expect(declined.state.phase).toBe('AWAITING_END_TURN');
+    // Passing from the same roll: there is no decline, ending the turn is how you say no.
+    const passed = reduce(SMALL_MAP, rolled, { playerId: currentId, action: { type: 'end_turn' } }, identityRng);
+    expect(passed.error).toBeUndefined();
+    expect(passed.state.tiles[3]!.owner).toBeNull();
+    expect(passed.state.phase).toBe('AWAITING_ROLL');
+    expect(passed.state.turnOrder[passed.state.currentPlayerIndex]).not.toBe(currentId);
+    expect(passed.events.some((e) => e.type === 'turn_ended')).toBe(true);
+  });
+
+  it('offers buy plus end turn on an unowned tile, and nothing to decline', () => {
+    const started = startedGame();
+    const currentId = started.turnOrder[started.currentPlayerIndex]!;
+    const rolled = reduce(SMALL_MAP, started, { playerId: currentId, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)])).state;
+    const types = legalActions(SMALL_MAP, rolled, currentId).map((a) => a.type);
+    expect(types).toContain('buy');
+    expect(types).toContain('end_turn');
+    expect(types).not.toContain('roll');
+    // Rolling is still refused: without doubles, the turn is over once you pass.
+    const r = reduce(SMALL_MAP, rolled, { playerId: currentId, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
+    expect(r.error).toBeDefined();
+    expect(r.state).toBe(rolled);
+  });
+
+  it('after doubles onto an unowned tile, rolling again passes on it; ending the turn is refused', () => {
+    const started = startedGame();
+    const currentId = started.turnOrder[started.currentPlayerIndex]!;
+    // (3,3): tile0 -> tile6, an unowned city.
+    const rolled = reduce(SMALL_MAP, started, { playerId: currentId, action: { type: 'roll' } }, queueRng([dieVal(3), dieVal(3)])).state;
+    expect(rolled.phase).toBe('AWAITING_BUY');
+    const types = legalActions(SMALL_MAP, rolled, currentId).map((a) => a.type);
+    expect(types).toContain('buy');
+    expect(types).toContain('roll');
+    expect(types).not.toContain('end_turn');
+
+    const ended = reduce(SMALL_MAP, rolled, { playerId: currentId, action: { type: 'end_turn' } }, identityRng);
+    expect(ended.error).toBeDefined();
+    expect(ended.state).toBe(rolled);
+
+    // (1,2): tile6 -> tile9, a surprise card — anything but another buy prompt works here.
+    const again = reduce(SMALL_MAP, rolled, { playerId: currentId, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
+    expect(again.error).toBeUndefined();
+    expect(again.state.tiles[6]!.owner).toBeNull();
+    expect(again.state.players.find((p) => p.id === currentId)!.tileIndex).not.toBe(6);
+  });
+
+  it('building is allowed while a purchase is on offer', () => {
+    let state = startedGame();
+    const currentId = state.turnOrder[state.currentPlayerIndex]!;
+    // Own the whole Brazil set (tiles 1 and 3) up front, then land on an unowned tile.
+    state = { ...state, tiles: state.tiles.map((t, i) => (i === 1 || i === 3 ? { ...t, owner: currentId } : t)) };
+    const rolled = reduce(SMALL_MAP, state, { playerId: currentId, action: { type: 'roll' } }, queueRng([dieVal(2), dieVal(3)])).state;
+    expect(rolled.phase).toBe('AWAITING_BUY');
+    const built = reduce(SMALL_MAP, rolled, { playerId: currentId, action: { type: 'buy_house', tileIndex: 1 } }, identityRng);
+    expect(built.error).toBeUndefined();
+    expect(built.state.tiles[1]!.houses).toBe(1);
+    expect(built.state.phase).toBe('AWAITING_BUY');
   });
 
   it('rejects rolling out of turn, leaving state unchanged', () => {
@@ -157,8 +210,7 @@ describe('jail', () => {
     // advance turns back around to the jailed player
     while (state.turnOrder[state.currentPlayerIndex] !== jailedId) {
       state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)])).state;
-      if (state.phase === 'AWAITING_BUY') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'decline_buy' } }, identityRng).state;
-      if (state.phase === 'AWAITING_END_TURN') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'end_turn' } }, identityRng).state;
+      if (state.phase === 'AWAITING_BUY' || state.phase === 'AWAITING_END_TURN') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'end_turn' } }, identityRng).state;
     }
     const before = state.players.find((p) => p.id === jailedId)!;
     expect(before.inJail).toBe(true);
@@ -178,27 +230,26 @@ describe('jail', () => {
     let { state, jailedId } = jailedState();
     while (state.turnOrder[state.currentPlayerIndex] !== jailedId) {
       state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)])).state;
-      if (state.phase === 'AWAITING_BUY') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'decline_buy' } }, identityRng).state;
-      if (state.phase === 'AWAITING_END_TURN') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'end_turn' } }, identityRng).state;
+      if (state.phase === 'AWAITING_BUY' || state.phase === 'AWAITING_END_TURN') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'end_turn' } }, identityRng).state;
     }
     // From jail (tile 7), (3,3) lands on tile 13 — an unowned city, so a normal buy prompt is
-    // still owed (escaping jail still resolves the landed tile). Decline it, then the turn ends —
+    // still owed (escaping jail still resolves the landed tile). Passing on it ends the turn —
     // no bonus reroll for escaping jail via doubles.
     let r = reduce(SMALL_MAP, state, { playerId: jailedId, action: { type: 'roll' } }, queueRng([dieVal(3), dieVal(3)]));
     const player = r.state.players.find((p) => p.id === jailedId)!;
     expect(player.inJail).toBe(false);
     expect(r.events.some((e) => e.type === 'left_jail' && e.how === 'doubles')).toBe(true);
     expect(r.state.phase).toBe('AWAITING_BUY');
-    r = reduce(SMALL_MAP, r.state, { playerId: jailedId, action: { type: 'decline_buy' } }, identityRng);
-    expect(r.state.phase).toBe('AWAITING_END_TURN');
+    const types = legalActions(SMALL_MAP, r.state, jailedId).map((a) => a.type);
+    expect(types).toContain('end_turn');
+    expect(types).not.toContain('roll');
   });
 
   it('three failed attempts force-pays the fee and moves on the third roll', () => {
     let { state, jailedId } = jailedState();
     while (state.turnOrder[state.currentPlayerIndex] !== jailedId) {
       state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)])).state;
-      if (state.phase === 'AWAITING_BUY') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'decline_buy' } }, identityRng).state;
-      if (state.phase === 'AWAITING_END_TURN') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'end_turn' } }, identityRng).state;
+      if (state.phase === 'AWAITING_BUY' || state.phase === 'AWAITING_END_TURN') state = reduce(SMALL_MAP, state, { playerId: state.turnOrder[state.currentPlayerIndex]!, action: { type: 'end_turn' } }, identityRng).state;
     }
     const cashBefore = state.players.find((p) => p.id === jailedId)!.cash;
     // Three non-double attempts.
@@ -209,16 +260,14 @@ describe('jail', () => {
     while (r.state.turnOrder[r.state.currentPlayerIndex] !== jailedId) {
       const cur = r.state.turnOrder[r.state.currentPlayerIndex]!;
       r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
-      if (r.state.phase === 'AWAITING_BUY') r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'decline_buy' } }, identityRng);
-      if (r.state.phase === 'AWAITING_END_TURN') r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'end_turn' } }, identityRng);
+      if (r.state.phase === 'AWAITING_BUY' || r.state.phase === 'AWAITING_END_TURN') r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'end_turn' } }, identityRng);
     }
     r = reduce(SMALL_MAP, r.state, { playerId: jailedId, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
     r = reduce(SMALL_MAP, r.state, { playerId: jailedId, action: { type: 'end_turn' } }, identityRng);
     while (r.state.turnOrder[r.state.currentPlayerIndex] !== jailedId) {
       const cur = r.state.turnOrder[r.state.currentPlayerIndex]!;
       r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
-      if (r.state.phase === 'AWAITING_BUY') r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'decline_buy' } }, identityRng);
-      if (r.state.phase === 'AWAITING_END_TURN') r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'end_turn' } }, identityRng);
+      if (r.state.phase === 'AWAITING_BUY' || r.state.phase === 'AWAITING_END_TURN') r = reduce(SMALL_MAP, r.state, { playerId: cur, action: { type: 'end_turn' } }, identityRng);
     }
     // Third attempt: forced exit + move.
     const third = reduce(SMALL_MAP, r.state, { playerId: jailedId, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
@@ -280,8 +329,7 @@ describe('vacation corner', () => {
 
     // p2's turn ends next, which would normally hand back to p1 — but p1 is still sitting
     // out, so with only two players the table skips straight back to p2 instead of stalling.
-    let s = reduce(SMALL_MAP, toP2.state, { playerId: p2, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
-    if (s.state.phase === 'AWAITING_BUY') s = reduce(SMALL_MAP, s.state, { playerId: p2, action: { type: 'decline_buy' } }, identityRng);
+    const s = reduce(SMALL_MAP, toP2.state, { playerId: p2, action: { type: 'roll' } }, queueRng([dieVal(1), dieVal(2)]));
     const backToP2 = reduce(SMALL_MAP, s.state, { playerId: p2, action: { type: 'end_turn' } }, identityRng);
     expect(backToP2.events.some((e) => e.type === 'turn_skipped' && e.playerId === p1)).toBe(true);
     expect(backToP2.state.turnOrder[backToP2.state.currentPlayerIndex]).toBe(p2);
@@ -334,9 +382,7 @@ describe('determinism', () => {
         const cur = state.turnOrder[state.currentPlayerIndex]!;
         if (state.phase === 'AWAITING_ROLL') {
           state = reduce(SMALL_MAP, state, { playerId: cur, action: { type: 'roll' } }, rng).state;
-        } else if (state.phase === 'AWAITING_BUY') {
-          state = reduce(SMALL_MAP, state, { playerId: cur, action: { type: 'decline_buy' } }, rng).state;
-        } else if (state.phase === 'AWAITING_END_TURN') {
+        } else if (state.phase === 'AWAITING_BUY' || state.phase === 'AWAITING_END_TURN') {
           state = reduce(SMALL_MAP, state, { playerId: cur, action: { type: 'end_turn' } }, rng).state;
         } else {
           break;

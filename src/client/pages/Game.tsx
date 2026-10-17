@@ -1,15 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { GameAction, GameEvent, GameMap, GameState, PlayerId } from '../../shared/types';
 import { actingPlayerId } from '../acting';
+import { ActionBar } from '../components/ActionBar';
 import { Board } from '../components/Board';
 import { Sidebar } from '../components/Sidebar';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { ShareLink } from '../components/ShareLink';
 import { TradeModal, type TradeModalMode } from '../components/TradeModal';
 import { PropertyCard } from '../components/PropertyCard';
+import { usePlayback } from '../playback';
 
 export function Game({
-  map, state, myPlayerId, events, onAction, code, error = null, onClearError = () => {},
+  map, state: serverState, myPlayerId, events: serverEvents, onAction, code, error = null, onClearError = () => {},
+  onBusyChange,
 }: {
   map: GameMap;
   state: GameState;
@@ -20,7 +23,14 @@ export function Game({
   /** The latest server refusal, surfaced inside the trade modal and the property card. */
   error?: string | null;
   onClearError?: () => void;
+  /** Told when the board starts and finishes playing a batch — the dev simulator waits on it. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
+  // Everything below renders the state as the animation has got to it, not as the server
+  // last sent it, so the balances, buttons and log change when the board shows why.
+  const { state, events, busy, presentation } = usePlayback(map, serverState, serverEvents);
+  useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
+
   // One tab can be driving several seats (see `actingPlayerId`); the server is told which
   // one an action is for, and refuses any id that is not one of this player's dummies.
   const acting = actingPlayerId(state, myPlayerId);
@@ -61,7 +71,10 @@ export function Game({
         </div>
       </div>
       <div className="game__board-wrap">
-        <Board map={map} state={state} events={events} onTileClick={openCard} />
+        <Board
+          map={map} state={state} events={events} onTileClick={openCard} presentation={presentation}
+          controls={<ActionBar map={map} state={state} myPlayerId={myPlayerId} actingPlayerId={acting} onAction={act} busy={busy} />}
+        />
       </div>
       <Sidebar
         map={map} state={state} myPlayerId={myPlayerId} actingPlayerId={acting} onAction={act} onActAs={actAs}

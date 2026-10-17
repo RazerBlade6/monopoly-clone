@@ -55,7 +55,6 @@ function chooseAction(map: typeof SMALL_MAP, state: GameState, playerId: string)
     prefer('pay_jail_fee') ??
     prefer('use_pardon') ??
     prefer('roll') ??
-    prefer('decline_buy') ??
     prefer('sell_house') ??
     prefer('sell_hotel') ??
     prefer('end_turn') ??

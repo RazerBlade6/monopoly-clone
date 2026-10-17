@@ -113,6 +113,21 @@ button, input, select {
 .home__divider::before, .home__divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .home__divider span { padding: 0 0.75rem; }
 .home__join { display: flex; gap: 0.5rem; }
+.home__dev { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem 1.5rem; text-align: left; border-style: dashed; }
+.home__dev-row { display: flex; gap: 0.6rem; align-items: center; }
+.home__dev-row .input { flex: 1; padding: 0.5em 0.7em; }
+.home__dev-toggle { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+/* Floats over the bottom of the left rail in the simulation. */
+.sim-bar {
+  position: fixed; left: 0.6rem; bottom: 0.6rem; z-index: 40;
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.45rem 0.6rem; border-radius: 999px;
+  background: rgba(21, 17, 38, 0.92); border: 1px dashed var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45); font-size: 0.8rem;
+}
+.sim-bar__tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 800; padding-left: 0.3rem; }
+.sim-bar__toggle { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); }
+.sim-bar__select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.2em 0.4em; }
 .home__credits { color: var(--muted); font-size: 0.75rem; text-align: center; line-height: 1.5; }
 .home__credits a { color: inherit; }
 
@@ -458,6 +473,47 @@ button, input, select {
    percentage already renders it 1.5x larger. */
 .tile__icon { font-size: 30cqmin; line-height: 1; }
 .tile--corner .tile__icon { font-size: 40cqmin; }
+/* The prison corner, split: a dark cell in the inner angle (the cage over it lives in the
+   token layer, `.board__cage`), and "Passing by" along the band on the outer edge. */
+.tile__cell {
+  position: absolute;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.35);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.tile__passing {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  /* Hugging the outer edge, so a visitor standing in the band covers as little of it as
+     possible. */
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2cqmin;
+  font-size: 10cqmin;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.board__cage {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 3px;
+}
+/* The icon draws its bars inside a margin of its own (about 7% at the sides and 11% top and
+   bottom of its square), so it is stretched past the cell's box until the frame meets the
+   cell's edges, and the cell clips the overhang. */
+.board__cage .icon-img {
+  position: absolute;
+  left: -8%;
+  top: -12%;
+  width: 116%;
+  height: 124%;
+  max-width: none;
+}
 .tile__sub { color: var(--text); font-weight: 700; }
 .tile__price { color: var(--muted); font-size: 17cqmin; }
 .tile--corner .tile__name { font-weight: 700; }
@@ -511,36 +567,59 @@ button, input, select {
 .tile__buildings { font-size: 12cqmin; line-height: 1; display: flex; justify-content: center; gap: 1cqmin; }
 .tile--o-left .tile__buildings, .tile--o-right .tile__buildings { writing-mode: horizontal-tb; }
 .tile--o-left .tile__buildings { transform: rotate(180deg); }
-/* Tokens live in their own full-grid overlay (`.board__tokens-layer`, placed
-   as a sibling of the tile cells) rather than inside each tile, so a move
-   between tiles is one element's `left`/`top` transitioning smoothly instead
-   of an unmount/remount jump. `pointer-events: none` on the layer keeps it
-   from swallowing clicks over the tiles it overlaps; individual tokens opt
-   back in so their name still shows on hover. */
+/* Tokens live in their own full-grid overlay (`.board__tokens-layer`, placed as a sibling
+   of the tile cells) rather than inside each tile, so a move between tiles is one element
+   travelling instead of an unmount/remount jump. `pointer-events: none` keeps the layer
+   from swallowing clicks over the tiles it overlaps; each token's body opts back in so its
+   name still shows on hover. */
 .board__tokens-layer {
   position: relative;
   pointer-events: none;
   z-index: 6;
 }
+/* As big as the whole layer, so Framer's `x`/`y` percentages (of the element's own box)
+   are percentages of the board. Only its transform ever changes. */
+.token-track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* A zero-size anchor at the token's standing point, with the shadow and the body both
+   centred on it. Its scale is the crowd's (smaller when a tile is shared); the
+   body's own scale swells with speed while it moves.
+   Sized off the board (`cqmin`), with everything inside in `em`: roughly two thirds of a
+   side tile's short axis on any board size. */
 .token {
   position: absolute;
-  transform: translate(-50%, -50%);
-  /* Sized off the board (`cqmin`), with the face laid out in `em` so eyes and pupils
-     follow. Roughly two thirds of a side tile's short axis on any board size. */
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
   font-size: 4.4cqmin;
+}
+.token__body {
+  position: absolute;
+  left: -0.5em;
+  top: -0.5em;
   width: 1em;
   height: 1em;
   border-radius: 50%;
   border: 2px solid rgba(0,0,0,0.45);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.65), inset 0 -4px 8px rgba(0,0,0,0.22);
+  box-shadow: inset 0 -0.12em 0.22em rgba(0,0,0,0.25), inset 0 0.08em 0.12em rgba(255,255,255,0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.05em;
   pointer-events: auto;
-  /* One step of the ring walk. Must stay under `useWalkedTile`'s interval or a
-     fast walk would still be sliding when the next step is set. */
-  transition: left 0.12s linear, top 0.12s linear;
+}
+.token__shadow {
+  position: absolute;
+  left: -0.46em;
+  top: 0.26em;
+  width: 0.92em;
+  height: 0.36em;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.75), rgba(0,0,0,0));
 }
 .token__eye {
   width: 0.27em;
@@ -561,15 +640,17 @@ button, input, select {
   border-radius: 50%;
   background: #111820;
 }
-/* Whose turn it is, read off the board rather than the sidebar. */
-.token--turn { animation: token-pulse 1.1s ease-in-out infinite; }
-@keyframes token-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+/* Whose turn it is, read off the board rather than the sidebar: the token itself breathes,
+   dimming to half and coming back a touch brighter than its resting colour. It holds steady
+   while it moves, so the token everyone is following never fades out mid-walk. Only opacity
+   and filter animate here; the body's transform belongs to Framer. */
+.token--turn:not(.token--moving) .token__body { animation: token-blink 1.2s ease-in-out infinite; }
+@keyframes token-blink {
+  0%, 100% { opacity: 1; filter: brightness(1.1); }
+  50% { opacity: 0.5; filter: brightness(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .token--turn { animation: none; box-shadow: 0 0 0 3px var(--accent); }
-  .token { transition: none; }
+  .token--turn .token__body { animation: none; box-shadow: 0 0 0 0.08em #fff, 0 0 0.3em rgba(255,255,255,0.6); }
 }
 
 .board__center {
@@ -592,10 +673,9 @@ button, input, select {
   text-align: center;
   color: var(--muted);
 }
-/* The dice sit centred in the space above the log rather than pinned to the top edge. */
+/* The dice and the turn's buttons, centred in the space above the log and then lifted a
+   little (the bottom padding), so they read as the board's focal point. */
 .board__stage {
-  /* Containing block for the drawn-card popup, so it covers the stage and not the log. */
-  position: relative;
   width: 100%;
   flex: 1;
   min-height: 0;
@@ -603,23 +683,35 @@ button, input, select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(0.5rem * var(--tile-scale, 1));
+  gap: calc(0.8rem * var(--tile-scale, 1));
+  padding-bottom: calc(2.5rem * var(--tile-scale, 1));
 }
 .board__dice { display: flex; gap: 0.9rem; justify-content: center; flex-shrink: 0; }
+/* Nobody has rolled yet: the dice are there, but not showing a result. */
+.board__dice--idle { opacity: 0.5; }
+/* Holds the log, and is the containing block for the drawn-card popup that covers it. */
+.board__lower {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  max-height: 46%;
+  min-height: calc(7rem * var(--tile-scale, 1));
+  display: flex;
+  flex-direction: column;
+}
 .die {
   --die-size: calc(4.2rem * var(--tile-scale, 1));
   width: var(--die-size);
   height: var(--die-size);
   perspective: 600px;
 }
-/* A real cube rather than a flat face: six pipped sides pinned around the centre,
-   spun by transitioning to a rotation several whole turns past its resting one. */
+/* A real cube rather than a flat face: six pipped sides pinned around the centre. Framer
+   turns it (see `Die` in Board.tsx); nothing here animates. */
 .die__cube {
   position: relative;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.9s cubic-bezier(0.18, 0.86, 0.24, 1);
 }
 .die__face {
   position: absolute;
@@ -640,9 +732,6 @@ button, input, select {
 .die__face--2 { transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__face--5 { transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__pip { border-radius: 50%; background: #1a1f2b; }
-@media (prefers-reduced-motion: reduce) {
-  .die__cube { transition: none; }
-}
 .board__phase {
   font-size: calc(1rem * var(--tile-scale, 1));
   letter-spacing: 0.04em;
@@ -658,8 +747,8 @@ button, input, select {
 /* Only the last handful of entries, centred and large enough to read across the table.
    The stage above it takes the rest of the height, so the log never grows the board. */
 .board__center-inner .event-log {
-  flex: 0 0 auto;
-  max-height: 46%;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   padding: calc(0.6rem * var(--tile-scale, 1));
   background: rgba(255,255,255,0.03);
@@ -844,21 +933,44 @@ button, input, select {
 .deed__bank { margin: 0.45rem 0 0.1rem; text-align: center; font-size: 0.68rem; color: #b9bcc6; }
 .deed__error { margin: 0.45rem 0 0.1rem; font-size: 0.72rem; }
 
+/* The turn's buttons, between the dice and the log in the middle of the board. Sized off the ring like
+   the dice are, so they stay in proportion on the bigger boards. */
 .action-bar {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(0.4rem * var(--tile-scale, 1));
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.action-bar__buttons {
+  /* A fieldset, so one `disabled` holds every button while the board catches up. */
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
+  justify-content: center;
+  gap: calc(0.55rem * var(--tile-scale, 1));
+}
+.btn--turn {
+  font-size: calc(1.05rem * var(--tile-scale, 1));
+  padding: 0.7em 1.4em;
+  min-width: calc(9rem * var(--tile-scale, 1));
+  border-radius: 999px;
 }
 .action-bar__acting {
-  margin: 0; font-size: 0.78rem; color: var(--accent); font-weight: 700;
+  margin: 0; font-size: calc(0.85rem * var(--tile-scale, 1)); color: var(--accent); font-weight: 700;
 }
-.action-bar__waiting, .action-bar__over { color: var(--muted); margin: 0; font-size: 0.9rem; }
-.action-bar__debt { color: var(--danger); margin: 0; font-size: 0.9rem; line-height: 1.35; }
+.action-bar__waiting, .action-bar__over {
+  color: var(--muted); margin: 0; font-size: calc(1rem * var(--tile-scale, 1));
+}
+.action-bar__debt {
+  color: var(--danger); margin: 0; font-size: calc(0.92rem * var(--tile-scale, 1));
+  line-height: 1.35; max-width: 32em;
+}
+.sidebar__bankrupt { display: flex; justify-content: flex-end; }
 
 .event-log {
   background: var(--surface);

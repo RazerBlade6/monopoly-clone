@@ -34,7 +34,6 @@ export function assetBlockedReason(
     if (building) return "You can't build while in debt";
   } else {
     if (state.turnOrder[state.currentPlayerIndex] !== seat) return 'Only on your turn';
-    if (state.phase === 'AWAITING_BUY') return 'Decide on the purchase first';
   }
   return engineError(map, state, seat, action) ?? 'Not possible right now';
 }
