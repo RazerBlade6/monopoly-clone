@@ -51,7 +51,7 @@ describe('applyCardEffect', () => {
     expect(p1.cash).toBe(p1Before + 30); // creditor only ever receives what was actually collected
   });
 
-  it('money_from_each: negative pays every other active player (SPEC decision 13 path)', () => {
+  it('money_from_each: negative pays every other active player (docs/ENGINE.md decision 13 path)', () => {
     const state = started();
     const p1Before = state.players.find((p) => p.id === 'p1')!.cash;
     const p2Before = state.players.find((p) => p.id === 'p2')!.cash;

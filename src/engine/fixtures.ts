@@ -104,7 +104,7 @@ export const SMALL_MAP: GameMap = (() => {
 
 /**
  * A 48-tile board with zero companies and a 5-property and a 6-property
- * group (SPEC: group sizes are 2, 3, 4, 5 or 6 — never assume 3, never
+ * group (docs/DATA.md: group sizes are 2, 3, 4, 5 or 6 — never assume 3, never
  * assume companies exist).
  */
 export const WEIRD_MAP: GameMap = (() => {

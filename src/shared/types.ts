@@ -71,7 +71,7 @@ export type CardEffect =
 export interface Card {
   id: string;
   deck: DeckId;
-  /** Original wording. Never Hasbro's text — see SPEC.md §IP. */
+  /** Original wording. Never Hasbro's text — see docs/PROJECT.md, "IP". */
   text: string;
   effect: CardEffect;
 }
@@ -94,7 +94,7 @@ export interface RoomSettings {
   /**
    * Extra cash paid on top of `startSalary` when a token comes to rest exactly on
    * START (passing over it pays `startSalary` alone). Flat, not scaled: richup's
-   * bundle carries no start-bonus identifier (research/README.md:152), so the
+   * bundle carries no start-bonus identifier (research/README.md, "What nobody could verify"), so the
    * relationship to `startSalary` is unknown and 100 is a literal, not a ratio.
    */
   landOnStartBonus: number;
@@ -185,7 +185,7 @@ export interface Debt {
   amount: number;
   /** null = the Bank. */
   creditor: PlayerId | null;
-  /** Queued follow-on debts, resolved in order (SPEC decision 13). */
+  /** Queued follow-on debts, resolved in order (docs/ENGINE.md decision 13). */
   queued: readonly { amount: number; creditor: PlayerId | null }[];
 }
 

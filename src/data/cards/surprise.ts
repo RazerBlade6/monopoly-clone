@@ -2,7 +2,7 @@
  * Surprise deck (our Chance equivalent) — movement, sudden costs, chaos.
  * Card count and effect-type distribution are structurally modeled on the
  * official 16-card Chance deck catalogued in `research/cards.md` (mechanics
- * are not protectable — see SPEC.md §IP), but every `text` string here is
+ * are not protectable — see docs/PROJECT.md, "IP"), but every `text` string here is
  * original prose written for our travel theme. No Hasbro proper nouns or
  * card wording appear anywhere below.
  *
@@ -11,7 +11,7 @@
  * fixed absolute tile that only exists on the Classic map — that index isn't
  * safe across our four maps, so instead of reproducing them we swap in three
  * `move_relative` "reroute" cards below. The only `move_to` card in this deck
- * targets tileIndex 0 (START), which SPEC.md declares safe on every map.
+ * targets tileIndex 0 (START), which exists on every map.
  * No card in this deck is Classic-index-dependent.
  */
 

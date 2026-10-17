@@ -179,7 +179,7 @@ export function applyCardEffect(map: GameMap, state: GameState, playerId: Player
         return finish(next, evs);
       }
 
-      // You pay each other player — SPEC decision 13's multi-creditor debt, paid
+      // You pay each other player — docs/ENGINE.md decision 13's multi-creditor debt, paid
       // in turn order starting with the player to your left.
       const amount = -effect.amount;
       if (player.cash >= amount * others.length) {

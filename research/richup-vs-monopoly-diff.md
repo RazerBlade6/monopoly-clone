@@ -202,42 +202,14 @@ One further flag not covered by copyright: **"Electric Company" and "Water Works
 
 ---
 
-## 5. LESSONS FOR THE CLONE
+## 5. (Moved) Lessons for the clone
 
-### Copy (highest value first)
-
-1. **Index-based board config.** `prisonBlockIndex` / `vacationBlockIndex` rather than hardcoded corner positions. This one decision is what makes multiple board maps possible later. Do it from day one; retrofitting is painful.
-2. **The five-type block model** — `city` / `airport` / `company` / `corner` / `bonus`. Clean, extensible, and it keeps rent logic polymorphic.
-3. **A validated settings schema** (richup uses Zod) with an explicit default object and enumerated legal values for cash and player count. Every rule variant is a boolean in one place.
-4. **The refill-based turn clock**, not a flat per-turn countdown. Banking time across turns is what stops slow-play without punishing a genuinely complex trade turn.
-5. **Transient negative balance.** Letting a player go negative mid-turn and only blocking turn-end is strictly better UX than forcing an immediate liquidation decision, and it costs nothing.
-6. **Trade negotiation as a first-class state machine** — create / negotiate / confirm / decline / delete. The counter-offer step is the single biggest quality-of-life win over the physical game.
-7. **Moderation from day one** — votekick, host kick, mute, report, captcha. A public lobby without these is unshippable.
-8. **Zero-friction entry.** No signup, no download, guest play, room links. This is why richup has the traffic it has.
-
-### Improve
-
-1. **Ship the real rules on by default.** richup's defaults (`auction: false`, `mortgage: false`, `payDoubleRentWhenOwnFullSet: false`) produce a materially degraded game — no auctions means declining to buy has no cost, which removes an entire strategic dimension. Default to the official rules and let players *opt out*, not opt in.
-2. **Enforce the 32-house / 12-hotel bank.** Building scarcity is real Monopoly strategy and appears to be absent. Make it a toggle, default on.
-3. **Explicit rent claiming as an option.** Auto-collect by default (correct for digital), but the Hasbro forfeit rule is a fun optional variant.
-4. **Rename "Electric Company."** Free legal hygiene.
-5. **Anti-cheat is a first-class requirement, not a polish item.** This is the most concrete external finding in the research. Beyond a public Selenium bot (`https://github.com/shadazls/Monopoly-Bot-Richup.io`), greasyfork hosts a publicly listed **"richup.io Advanced Cheat Suite"** advertising a *socket interceptor, client-state reader, auto-play bot and HUD overlay* (`https://greasyfork.org/en/scripts/573868-richup-io-advanced-cheat-suite`). That combination only works if meaningful game state reaches the client and if the socket accepts what the client sends. The design lesson is blunt: **treat the client as hostile.** Never send a player state they should not see (opponent hands, deck order, upcoming cards), validate every action server-side against whose turn it is, and expect overlays to compute optimal play regardless. richup also ships a real-money cosmetic store, which raises the incentive to cheat.
-6. **Mobile.** richup itself concedes "Richup is better on desktop PCs and laptops." A genuinely mobile-first board game is an open opportunity.
-7. **Even-build should not be disable-able**, or at least should be labelled clearly as a non-standard variant.
-
-### Sanity check against comparable implementations
-
-Worth noting that richup's choices are not the only reasonable ones. **Monopoly Plus** (Ubisoft) is the useful comparator precisely because it is *licensed* — it had no naming problem to solve, so every deviation it makes is a pure digital-design decision rather than a legal one. It still faced the same two questions richup did: it implements auctions as a rules option rather than silently dropping them, and it uses turn timers in online play, converging with richup on the conclusion that untimed turns do not survive contact with strangers on the internet. The lesson is that the **timer is a genuine necessity of the medium**, while **defaulting auctions off is a choice richup made and a licensed implementation did not** — reinforcing the recommendation above to ship the official rules on by default. *(Characterisation of Monopoly Plus is from general knowledge, not a source fetched here — confirm before citing.)*
-
-### Avoid
-
-1. **Do not put "Monopoly" in your name, domain, or logo.** richup's use of it in meta tags is the riskiest thing it does; don't treat it as precedent.
-2. **Don't cap at 4 players by default.** richup's `maxPlayers: 4` default is an odd shrink from Hasbro's 8, and its 7–8 player support is locked to a single board map rather than being a property of the rules. Support 2–8 everywhere and default to 6.
-3. **Don't ship a settings panel so large it fragments the lobby.** Twelve-plus toggles means no two games play alike; offer 2–3 named presets (Classic / Quick / Custom).
-4. **Don't put ads in the game room** if you can avoid it; richup loads a 960×540 ad unit inside the room chunk.
-5. **Don't let jail become a rent-free camping spot** without shipping the counter-rule — richup's own tips admit the exploit exists before offering the fix as an opt-in.
-
-**Caveat on this section:** items grounded in the bundle or richup's own copy are well-sourced. The user-complaint dimension is **thin** — targeted searches for Reddit/Discord/HN discussion of richup returned mostly SEO content farms, and I found no substantial first-hand complaint corpus. Treat the "Improve" and "Avoid" lists as engineering judgement informed by the bundle, not as validated user research. Real playtesting should replace them.
+The design lessons drawn from this comparison (server authority and a hostile client, index-based board
+data, the block model, original card text) are in `docs/PROJECT.md` under "Principles" and "IP".
+The cheat-suite evidence behind treating the client as hostile: a public Selenium bot
+(`https://github.com/shadazls/Monopoly-Bot-Richup.io`) and a greasyfork "richup.io Advanced Cheat
+Suite" with a socket interceptor, client-state reader, auto-play bot and HUD overlay
+(`https://greasyfork.org/en/scripts/573868-richup-io-advanced-cheat-suite`).
 
 ---
 

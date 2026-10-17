@@ -100,7 +100,7 @@ describe('building supply exhaustion', () => {
   });
 });
 
-describe('hotel-break rule (SPEC decision 17)', () => {
+describe('hotel-break rule (docs/ENGINE.md decision 17)', () => {
   it('selling a hotel breaks it into 4 houses on that tile when the bank has 4 spare', () => {
     let state = baseState();
     for (const i of [12, 13, 15, 17]) state = updateTile(state, i, { houses: 4 });
