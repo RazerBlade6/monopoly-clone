@@ -619,6 +619,8 @@ function BoardTile({
   // buys side tiles enough room for a full city name instead of an ellipsis.
   const orient = isCorner ? 'corner' : edge;
   const isJail = isCorner && tile.type === 'corner' && tile.subtype === 'jail';
+  const acquired = useAcquired(owner?.id ?? null);
+  const [shone, setShone] = useState(0);
 
   return (
     <div
@@ -660,9 +662,35 @@ function BoardTile({
       </div>
       )}
       {tile.type === 'city' && <div className="tile__flag"><FlagImage tile={tile} /></div>}
-      {owner && <div className="tile__owner" style={{ background: owner.color }} title={owner.name} />}
+      {owner && (
+        <div
+          key={`${owner.id}:${acquired}`}
+          className={`tile__owner${acquired ? ' tile__owner--new' : ''}`}
+          style={{ background: owner.color }}
+          title={owner.name}
+        />
+      )}
+      {acquired > shone && (
+        <div key={acquired} className="tile__shine" aria-hidden onAnimationEnd={() => setShone(acquired)} />
+      )}
     </div>
   );
+}
+
+/**
+ * Counts the times a tile has changed hands to someone since it mounted, so a purchase (or
+ * a trade) can replay its shine and grow the owner's bar in, keyed on the count. What a
+ * tile already owns when the board first draws is not news, and stays still.
+ */
+function useAcquired(ownerId: string | null): number {
+  const [count, setCount] = useState(0);
+  const previous = useRef(ownerId);
+  useEffect(() => {
+    if (ownerId === previous.current) return;
+    previous.current = ownerId;
+    if (ownerId) setCount(n => n + 1);
+  }, [ownerId]);
+  return count;
 }
 
 /**
