@@ -54,7 +54,10 @@ button, input, select {
 /* ─── Buttons & inputs ──────────────────────────────────────────────── */
 
 .btn {
-  background: var(--surface-2);
+  /* A faint sheen rather than a flat fill, like the cards. Flat, the middle of a button is
+     one solid colour, which Chrome draws as its own piece while the button scales on hover,
+     and the joins to the rounded ends showed as hairlines. A gradient never has a solid run. */
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)), var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius);
@@ -76,6 +79,29 @@ button, input, select {
 .btn--small { padding: 0.3em 0.6em; font-size: 0.8rem; }
 .btn--quiet { background: transparent; border-color: transparent; color: var(--muted); align-self: center; }
 .btn--quiet:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+
+/* Buttons give a little: they swell on hover, squash on press, and spring back past their
+   size when let go. Quick enough never to hold up a click. The springy curve overshoots,
+   which is the pop; the press itself is linear and faster, so it feels immediate. */
+.btn, .deed__close, .trade-modal__close {
+  transition: transform 0.18s cubic-bezier(0.34, 1.8, 0.64, 1), border-color 0.15s, filter 0.15s;
+}
+.btn:hover:not(:disabled), .deed__close:hover, .trade-modal__close:hover { transform: scale(1.05); }
+.btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
+/* A full-width button is already wide: the same share would read as a lurch. */
+.btn--big:hover:not(:disabled) { transform: scale(1.02); }
+.btn:active:not(:disabled), .deed__close:active, .trade-modal__close:active {
+  transform: scale(0.94);
+  transition-duration: 0.06s;
+  transition-timing-function: linear;
+}
+.btn--big:active:not(:disabled) { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .btn, .deed__close, .trade-modal__close { transition: border-color 0.15s, filter 0.15s; }
+  .btn:hover:not(:disabled), .btn:active:not(:disabled),
+  .deed__close:hover, .deed__close:active,
+  .trade-modal__close:hover, .trade-modal__close:active { transform: none; }
+}
 
 .input {
   background: var(--surface);
@@ -410,7 +436,7 @@ button, input, select {
    that is why it reserves on the same side as `.tile--o-right` rather than the
    mirrored one. */
 /* The owner's colour is the loudest thing on the board — a thick slab, not a hairline. */
-.tile { --owner-bar: 24cqmin; }
+.tile { --owner-bar: 30cqmin; }
 .tile--corner { --owner-bar: 0px; }
 
 /* Name and price ride together just outside the badge. */
@@ -561,6 +587,52 @@ button, input, select {
 .tile--o-left .tile__owner { left: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
 .tile--o-right .tile__owner { right: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
 
+/* A new owner's bar grows out from its middle along the rim, and the tile catches a brief
+   shine in its own hue, lifted: quick and faint, a nod rather than a fanfare. */
+.tile__owner--new { animation: owner-grow-x 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tile--o-left .tile__owner--new,
+.tile--o-right .tile__owner--new { animation-name: owner-grow-y; }
+@keyframes owner-grow-x { from { transform: scaleX(0); opacity: 0.5; } }
+@keyframes owner-grow-y { from { transform: scaleY(0); opacity: 0.5; } }
+.tile__shine {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background: var(--shine);
+  pointer-events: none;
+  opacity: 0;
+  animation: tile-shine 0.5s ease-out both;
+}
+@keyframes tile-shine {
+  18% { opacity: 0.3; }
+  to { opacity: 0; }
+}
+/* A whole country in one hand: every tile of it lights up in the country's colour, an
+   outline and a wash, once, just after the purchase's own shine. */
+.tile__set-glow {
+  position: absolute;
+  inset: -1px;
+  z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--set) 38%, transparent);
+  box-shadow: 0 0 0 2px var(--set), 0 0 20px 4px var(--set);
+  filter: brightness(1.2);
+  opacity: 0;
+  animation: set-glow 1.8s ease-out 0.25s both;
+}
+@keyframes set-glow {
+  10% { opacity: 1; }
+  55% { opacity: 0.9; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile__owner--new { animation: none; }
+  .tile__shine { animation-duration: 0.3s; }
+  .tile__set-glow { animation-duration: 1.2s; }
+}
+
 /* Houses used to float in the tile's corner, where they landed on top of the flag badge.
    They sit in the text block under the price — a picture like the badge, so they opt
    out of the vertical writing mode and undo the left run's 180deg. */
@@ -576,6 +648,10 @@ button, input, select {
   position: relative;
   pointer-events: none;
   z-index: 6;
+  /* Each token's track is the size of the whole layer and translated off it, which would
+     otherwise count as scrollable overflow and make the page as much as twice the board's
+     size. Tokens all stand inside the board, so clipping hides nothing. */
+  overflow: clip;
 }
 /* As big as the whole layer, so Framer's `x`/`y` percentages (of the element's own box)
    are percentages of the board. Only its transform ever changes. */
@@ -673,28 +749,36 @@ button, input, select {
   text-align: center;
   color: var(--muted);
 }
-/* The dice and the turn's buttons, centred in the space above the log and then lifted a
-   little (the bottom padding), so they read as the board's focal point. */
+/* The dice and the turn's buttons, a little above the middle of the space over the log, so
+   they read as the board's focal point. The dice are pinned rather than centred with the
+   buttons: a centred group shifts whenever what is under the dice changes height (buttons
+   giving way to "Waiting for…", a debt notice), and the dice would jump with it. So the
+   first row is a fixed share of the stage, worked out to centre the dice and one row of
+   buttons together, and whatever sits under the dice hangs from them. */
 .board__stage {
   width: 100%;
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: calc(0.8rem * var(--tile-scale, 1));
-  padding-bottom: calc(2.5rem * var(--tile-scale, 1));
+  display: grid;
+  grid-template-rows: max(0px, calc(50% - 5.2rem * var(--tile-scale, 1))) auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-content: start;
 }
+/* Spacer, dice, buttons, vacation pot, and the rest of the height. */
+.board__stage > :nth-child(1) { grid-row: 2; }
+.board__stage > :nth-child(2) { grid-row: 3; margin-top: calc(0.8rem * var(--tile-scale, 1)); }
+.board__stage > :nth-child(3) { grid-row: 4; margin-top: calc(0.8rem * var(--tile-scale, 1)); }
 .board__dice { display: flex; gap: 0.9rem; justify-content: center; flex-shrink: 0; }
 /* Nobody has rolled yet: the dice are there, but not showing a result. */
 .board__dice--idle { opacity: 0.5; }
-/* Holds the log, and is the containing block for the drawn-card popup that covers it. */
+/* Holds the log, and is the containing block for the drawn-card popup that covers it.
+   A fixed share of the centre, not sized to its lines: a log that grew as lines wrapped
+   would push the dice up with every one. */
 .board__lower {
   position: relative;
-  flex: 0 0 auto;
+  flex: 0 0 38%;
   width: 100%;
-  max-height: 46%;
   min-height: calc(7rem * var(--tile-scale, 1));
   display: flex;
   flex-direction: column;
@@ -732,6 +816,8 @@ button, input, select {
 .die__face--2 { transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__face--5 { transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__pip { border-radius: 50%; background: #1a1f2b; }
+/* The faces turned away from a die at rest (see `Die`). */
+.die__face--hidden { visibility: hidden; }
 .board__phase {
   font-size: calc(1rem * var(--tile-scale, 1));
   letter-spacing: 0.04em;
@@ -837,6 +923,15 @@ button, input, select {
 .player-card__offline { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
 .player-card__cash { color: var(--money); font-size: 1rem; font-weight: 700; white-space: nowrap; }
 .player-card__cash--negative { color: var(--danger); }
+.cash-delta { position: relative; }
+/* Hangs under the balance's right edge, where the card is empty, and never takes space. */
+.cash-delta__bubble {
+  position: absolute; right: 0; top: 100%; line-height: 1;
+  font-size: 0.75rem; font-weight: 700; white-space: nowrap;
+  pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.cash-delta__bubble--gain { color: var(--money); }
+.cash-delta__bubble--loss { color: var(--danger); }
 .player-card__jail { color: var(--danger); font-size: 0.8rem; }
 .player-card__properties { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.25rem; }
 .property-dot { width: 8px; height: 8px; border-radius: 2px; }
@@ -890,6 +985,16 @@ button, input, select {
   padding: 0.4rem;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 32px rgba(0,0,0,0.55);
   outline: none;
+}
+/* Grows out of the row or tile that was clicked (its middle is the transform origin). */
+.deed--open { animation: deed-open 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes deed-open {
+  from { transform: scale(0.3); opacity: 0; }
+  60% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deed--open { animation: deed-fade 0.12s ease-out both; }
+  @keyframes deed-fade { from { opacity: 0; } }
 }
 .deed__header {
   position: relative;
@@ -982,7 +1087,7 @@ button, input, select {
   display: flex;
   flex-direction: column;
 }
-.event-log__list { list-style: none; margin: 0; padding: 0; overflow-y: auto; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.event-log__list { position: relative; list-style: none; margin: 0; padding: 0; overflow-y: auto; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .event-log__item { color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
 .event-log__empty { color: var(--muted); }
 

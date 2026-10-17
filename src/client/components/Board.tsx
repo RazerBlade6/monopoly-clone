@@ -3,9 +3,9 @@ import {
   animate, motion, useMotionValue, useReducedMotion, useTransform,
   type AnimationPlaybackControls,
 } from 'framer-motion';
-import type { GameMap, GameEvent, GameState, Player, Tile } from '../../shared/types';
+import type { CountryId, GameMap, GameEvent, GameState, Player, Tile } from '../../shared/types';
 import { CORNER_TRACK_RATIO, ringLayout, trackSpan, type Edge, type GridPos } from '../ringLayout';
-import { countryTint } from '../colors';
+import { countryColor, countryTint, tileShine } from '../colors';
 import { tileSubLabel } from '../tileArt';
 import { DICE_SPIN_S, DICE_STAGGER_S, JUMP_IN_S, JUMP_OUT_S, WALK_EASE } from '../motionTiming';
 import type { CardDrawnEvent, Presentation, TokenMotion } from '../playback';
@@ -57,11 +57,6 @@ function spinTarget(from: number, rest: number, turns: number): number {
   return rest + 360 * Math.ceil((from + turns * 360 - rest) / 360);
 }
 
-/** The angle equivalent to `rest` nearest `from`, so a face change with no roll doesn't spin. */
-function nearestRest(from: number, rest: number): number {
-  return rest + 360 * Math.round((from - rest) / 360);
-}
-
 /**
  * A real cube: six pipped faces in 3D. A roll tosses it up off the felt, tumbles it
  * several whole turns, and drops it with a small bounce onto its face. Each die spins a
@@ -79,38 +74,56 @@ function Die({ value, rollId, index }: { value: number; rollId: number; index: n
   const ry = useMotionValue(restY);
   const toss = useMotionValue(0);
   const y = useTransform(toss, v => `${-v * 42}%`);
-  const scale = useTransform(toss, v => 1 + v * 0.14);
+  // At rest only the face showing is drawn, and the angles are exactly the rest ones. A
+  // tumble leaves the cube turned through whole turns (720deg and so on), and a cube of six
+  // planes at those angles is something Chrome's compositor splits and re-sorts with
+  // rounding error, which showed as hairlines across the dice whenever something nearby
+  // redrew. One plane at a right angle has nothing to split against.
+  const [still, setStill] = useState(true);
   const seenRoll = useRef(rollId);
   const reduced = useReducedMotion();
 
   useEffect(() => {
     if (rollId === seenRoll.current || reduced) {
       seenRoll.current = rollId;
-      rx.set(nearestRest(rx.get(), restX));
-      ry.set(nearestRest(ry.get(), restY));
+      rx.set(restX);
+      ry.set(restY);
+      setStill(true);
       return;
     }
     seenRoll.current = rollId;
+    setStill(false);
     const delay = index * DICE_STAGGER_S;
     const spin = { duration: DICE_SPIN_S - delay, delay, ease: [0.15, 0.55, 0.25, 1] as const };
     const controls = [
       animate(rx, spinTarget(rx.get(), restX, 2 + index), spin),
       animate(ry, spinTarget(ry.get(), restY, 3 - index), spin),
-      // Up, down onto the felt, one small bounce, and still.
+      // Up, down onto the felt, one small bounce, and still. Height only, no growth: a die
+      // scaled mid-flight can be left drawn at its airborne resolution once it lands.
       animate(toss, [0, 1, 0, 0.18, 0], {
         duration: DICE_SPIN_S - delay, delay,
         times: [0, 0.32, 0.64, 0.8, 1],
         ease: ['easeOut', 'easeIn', 'easeOut', 'easeIn'],
       }),
     ];
-    return () => controls.forEach(c => c.stop());
+    let live = true;
+    void Promise.all(controls).then(() => {
+      if (!live) return;
+      rx.set(restX);
+      ry.set(restY);
+      setStill(true);
+    });
+    return () => {
+      live = false;
+      controls.forEach(c => c.stop());
+    };
   }, [rollId, restX, restY, index, rx, ry, toss, reduced]);
 
   return (
-    <motion.div className="die" style={{ y, scale }} aria-label={`die showing ${value}`}>
+    <motion.div className="die" style={{ y }} aria-label={`die showing ${value}`}>
       <motion.div className="die__cube" style={{ rotateX: rx, rotateY: ry }}>
         {[1, 2, 3, 4, 5, 6].map(face => (
-          <div key={face} className={`die__face die__face--${face}`}>
+          <div key={face} className={`die__face die__face--${face}${still && face !== value ? ' die__face--hidden' : ''}`}>
             {Array.from({ length: 9 }, (_, i) => (
               <span key={i} className={PIP_CELLS[face]!.includes(i) ? 'die__pip' : ''} />
             ))}
@@ -534,6 +547,7 @@ export function Board({
   const template = tracks.map(t => `${t}fr`).join(' ');
   const units = tracks.reduce((a, b) => a + b, 0);
   const { rollId, motions, card: drawnCard } = presentation;
+  const setsCompleted = useSetsCompleted(map, state);
 
   return (
     <div
@@ -559,6 +573,7 @@ export function Board({
             owner={ownership ? ownerOf(state.players, ownership.owner) : null}
             houses={ownership?.houses ?? 0}
             hotel={ownership?.hotel ?? false}
+            setCompleted={tile.type === 'city' ? setsCompleted.get(tile.countryId) ?? 0 : 0}
             onClick={clickTile && isProperty(tile) ? el => clickTile(i, el) : undefined}
           />
         );
@@ -602,14 +617,49 @@ function isProperty(tile: Tile): boolean {
   return tile.type === 'city' || tile.type === 'airport' || tile.type === 'company';
 }
 
+/**
+ * Counts, per country, the times one player has come to hold all of it since the board
+ * mounted, by purchase or by trade. Sets already whole when the board first draws are not
+ * news. A tile keys its glow on its country's count, so each new completion replays it.
+ */
+function useSetsCompleted(map: GameMap, state: GameState): ReadonlyMap<CountryId, number> {
+  const holders = new Map<CountryId, string | null>();
+  for (const tile of map.tiles) {
+    if (tile.type !== 'city') continue;
+    const owner = state.tiles[tile.index]?.owner ?? null;
+    const held = holders.get(tile.countryId);
+    holders.set(tile.countryId, held === undefined || held === owner ? owner : null);
+  }
+  const signature = [...holders].map(([c, o]) => `${c}:${o ?? ''}`).join(',');
+
+  const [counts, setCounts] = useState<ReadonlyMap<CountryId, number>>(new Map());
+  const previous = useRef(holders);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = holders;
+    const fresh = [...holders].filter(([c, o]) => o !== null && before.get(c) !== o).map(([c]) => c);
+    if (fresh.length === 0) return;
+    setCounts(old => {
+      const next = new Map(old);
+      for (const c of fresh) next.set(c, (next.get(c) ?? 0) + 1);
+      return next;
+    });
+    // `signature` is `holders` in a form that only changes when a holder does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+  return counts;
+}
+
 function BoardTile({
-  tile, pos, owner, houses, hotel, onClick,
+  tile, pos, owner, houses, hotel, setCompleted, onClick,
 }: {
   tile: Tile;
   pos: { row: number; col: number; edge: Edge; isCorner: boolean };
   owner: Player | null;
   houses: number;
   hotel: boolean;
+  /** How many times this tile's country has become one player's whole set; each one glows. */
+  setCompleted: number;
   /** Present on properties, which open their deed card; the rest of the board is inert. */
   onClick?: (el: HTMLElement) => void;
 }) {
@@ -619,6 +669,10 @@ function BoardTile({
   // buys side tiles enough room for a full city name instead of an ellipsis.
   const orient = isCorner ? 'corner' : edge;
   const isJail = isCorner && tile.type === 'corner' && tile.subtype === 'jail';
+  const acquired = useAcquired(owner?.id ?? null);
+  const [shone, setShone] = useState(0);
+  const [glowed, setGlowed] = useState(0);
+  const countryId = tile.type === 'city' ? tile.countryId : null;
 
   return (
     <div
@@ -660,9 +714,50 @@ function BoardTile({
       </div>
       )}
       {tile.type === 'city' && <div className="tile__flag"><FlagImage tile={tile} /></div>}
-      {owner && <div className="tile__owner" style={{ background: owner.color }} title={owner.name} />}
+      {owner && (
+        <div
+          key={`${owner.id}:${acquired}`}
+          className={`tile__owner${acquired ? ' tile__owner--new' : ''}`}
+          style={{ background: owner.color }}
+          title={owner.name}
+        />
+      )}
+      {acquired > shone && (
+        <div
+          key={`shine:${acquired}`}
+          className="tile__shine"
+          aria-hidden
+          style={{ ['--shine' as string]: tileShine(countryId) }}
+          onAnimationEnd={() => setShone(acquired)}
+        />
+      )}
+      {countryId && setCompleted > glowed && (
+        <div
+          key={`glow:${setCompleted}`}
+          className="tile__set-glow"
+          aria-hidden
+          style={{ ['--set' as string]: countryColor(countryId) }}
+          onAnimationEnd={() => setGlowed(setCompleted)}
+        />
+      )}
     </div>
   );
+}
+
+/**
+ * Counts the times a tile has changed hands to someone since it mounted, so a purchase (or
+ * a trade) can replay its shine and grow the owner's bar in, keyed on the count. What a
+ * tile already owns when the board first draws is not news, and stays still.
+ */
+function useAcquired(ownerId: string | null): number {
+  const [count, setCount] = useState(0);
+  const previous = useRef(ownerId);
+  useEffect(() => {
+    if (ownerId === previous.current) return;
+    previous.current = ownerId;
+    if (ownerId) setCount(n => n + 1);
+  }, [ownerId]);
+  return count;
 }
 
 /**

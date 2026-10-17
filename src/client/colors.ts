@@ -34,6 +34,14 @@ export function countryTint(id: CountryId): string {
   return `linear-gradient(hsla(${hue}, 62%, 52%, 0.30), hsla(${hue}, 55%, 30%, 0.10))`;
 }
 
+/**
+ * A tile's own hue, lifted: what washes over it when it changes hands. A city's is its
+ * country's; anything else takes the tiles' violet surface, brightened.
+ */
+export function tileShine(id: CountryId | null): string {
+  return id ? `hsl(${countryHue(id)}, 70%, 66%)` : 'hsl(255, 34%, 58%)';
+}
+
 export function displayName(id: string): string {
   return id.split('-').map(w => (w[0] ?? '').toUpperCase() + w.slice(1)).join(' ');
 }

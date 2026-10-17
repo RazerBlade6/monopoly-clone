@@ -44,12 +44,17 @@ export function PropertyCard({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  // Where the card grows from: the middle of what was clicked, in the card's own coordinates.
+  // Fixed at the first placement, so a re-measure when the content changes doesn't move it.
+  const [origin, setOrigin] = useState<string | null>(null);
 
   // Measured after render, and again whenever the content (and so the size) changes.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
+    // Layout size, not the drawn one: the card is scaled down while it grows in.
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
     const gap = 10;
     const margin = 8;
     const vw = window.innerWidth;
@@ -82,6 +87,9 @@ export function PropertyCard({
     left = Math.max(margin, Math.min(left, vw - width - margin));
     top = Math.max(margin, Math.min(top, vh - height - margin));
     setPos(prev => (prev && prev.left === left && prev.top === top ? prev : { left, top }));
+    if (origin === null) {
+      setOrigin(`${anchor.left + anchor.width / 2 - left}px ${anchor.top + anchor.height / 2 - top}px`);
+    }
   });
 
   useLayoutEffect(() => { ref.current?.focus({ preventScroll: true }); }, []);
@@ -153,8 +161,11 @@ export function PropertyCard({
 
   return (
     <div
-      ref={ref} className="deed" role="dialog" aria-labelledby="deed-title" tabIndex={-1}
-      style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
+      ref={ref} className={`deed${origin ? ' deed--open' : ''}`} role="dialog" aria-labelledby="deed-title" tabIndex={-1}
+      style={{
+        left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden',
+        ...(origin ? { transformOrigin: origin } : {}),
+      }}
     >
       <div className="deed__header" style={{ background: headerColor }}>
         <button className="deed__close" onClick={onClose} aria-label="Close">✕</button>
