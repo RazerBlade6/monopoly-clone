@@ -576,6 +576,10 @@ button, input, select {
   position: relative;
   pointer-events: none;
   z-index: 6;
+  /* Each token's track is the size of the whole layer and translated off it, which would
+     otherwise count as scrollable overflow and make the page as much as twice the board's
+     size. Tokens all stand inside the board, so clipping hides nothing. */
+  overflow: clip;
 }
 /* As big as the whole layer, so Framer's `x`/`y` percentages (of the element's own box)
    are percentages of the board. Only its transform ever changes. */
