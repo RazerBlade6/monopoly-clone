@@ -82,6 +82,10 @@ button, input, select {
    which is the pop; the press itself is linear and faster, so it feels immediate. */
 .btn, .deed__close, .trade-modal__close {
   transition: transform 0.18s cubic-bezier(0.34, 1.8, 0.64, 1), border-color 0.15s, filter 0.15s;
+  /* Composited from the start, not only once a hover begins scaling it. Promoting a button
+     mid-hover reshuffles the layers around it, and the dice's 3D faces were re-rastered
+     with hairline seams across them. */
+  will-change: transform;
 }
 .btn:hover:not(:disabled), .deed__close:hover, .trade-modal__close:hover { transform: scale(1.05); }
 .btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
@@ -746,28 +750,36 @@ button, input, select {
   text-align: center;
   color: var(--muted);
 }
-/* The dice and the turn's buttons, centred in the space above the log and then lifted a
-   little (the bottom padding), so they read as the board's focal point. */
+/* The dice and the turn's buttons, a little above the middle of the space over the log, so
+   they read as the board's focal point. The dice are pinned rather than centred with the
+   buttons: a centred group shifts whenever what is under the dice changes height (buttons
+   giving way to "Waiting for…", a debt notice), and the dice would jump with it. So the
+   first row is a fixed share of the stage, worked out to centre the dice and one row of
+   buttons together, and whatever sits under the dice hangs from them. */
 .board__stage {
   width: 100%;
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: calc(0.8rem * var(--tile-scale, 1));
-  padding-bottom: calc(2.5rem * var(--tile-scale, 1));
+  display: grid;
+  grid-template-rows: max(0px, calc(50% - 5.2rem * var(--tile-scale, 1))) auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-content: start;
 }
+/* Spacer, dice, buttons, vacation pot, and the rest of the height. */
+.board__stage > :nth-child(1) { grid-row: 2; }
+.board__stage > :nth-child(2) { grid-row: 3; margin-top: calc(0.8rem * var(--tile-scale, 1)); }
+.board__stage > :nth-child(3) { grid-row: 4; margin-top: calc(0.8rem * var(--tile-scale, 1)); }
 .board__dice { display: flex; gap: 0.9rem; justify-content: center; flex-shrink: 0; }
 /* Nobody has rolled yet: the dice are there, but not showing a result. */
 .board__dice--idle { opacity: 0.5; }
-/* Holds the log, and is the containing block for the drawn-card popup that covers it. */
+/* Holds the log, and is the containing block for the drawn-card popup that covers it.
+   A fixed share of the centre, not sized to its lines: a log that grew as lines wrapped
+   would push the dice up with every one. */
 .board__lower {
   position: relative;
-  flex: 0 0 auto;
+  flex: 0 0 38%;
   width: 100%;
-  max-height: 46%;
   min-height: calc(7rem * var(--tile-scale, 1));
   display: flex;
   flex-direction: column;
@@ -785,6 +797,8 @@ button, input, select {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  /* Its own layer for good (see `.btn`), so nothing animating nearby re-rasters it. */
+  will-change: transform;
 }
 .die__face {
   position: absolute;
