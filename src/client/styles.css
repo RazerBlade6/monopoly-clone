@@ -410,7 +410,7 @@ button, input, select {
    that is why it reserves on the same side as `.tile--o-right` rather than the
    mirrored one. */
 /* The owner's colour is the loudest thing on the board — a thick slab, not a hairline. */
-.tile { --owner-bar: 24cqmin; }
+.tile { --owner-bar: 30cqmin; }
 .tile--corner { --owner-bar: 0px; }
 
 /* Name and price ride together just outside the badge. */
@@ -560,6 +560,32 @@ button, input, select {
 .tile--o-top .tile__owner { top: 2px; left: 2px; right: 2px; height: var(--owner-bar); }
 .tile--o-left .tile__owner { left: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
 .tile--o-right .tile__owner { right: 2px; top: 2px; bottom: 2px; width: var(--owner-bar); }
+
+/* A new owner's bar grows out from its middle along the rim, and the tile catches a brief
+   white shine: quick and faint, a nod rather than a fanfare. */
+.tile__owner--new { animation: owner-grow-x 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tile--o-left .tile__owner--new,
+.tile--o-right .tile__owner--new { animation-name: owner-grow-y; }
+@keyframes owner-grow-x { from { transform: scaleX(0); opacity: 0.5; } }
+@keyframes owner-grow-y { from { transform: scaleY(0); opacity: 0.5; } }
+.tile__shine {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background: #fff;
+  pointer-events: none;
+  opacity: 0;
+  animation: tile-shine 0.5s ease-out both;
+}
+@keyframes tile-shine {
+  18% { opacity: 0.22; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile__owner--new { animation: none; }
+  .tile__shine { animation-duration: 0.3s; }
+}
 
 /* Houses used to float in the tile's corner, where they landed on top of the flag badge.
    They sit in the text block under the price — a picture like the badge, so they opt
