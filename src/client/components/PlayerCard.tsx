@@ -1,5 +1,6 @@
 import type { GameMap, GameState, Player } from '../../shared/types';
 import { countryColor } from '../colors';
+import { CashDelta } from './CashDelta';
 
 export function PlayerCard({
   player, map, state, isCurrentTurn, isMe, selected, onSelect,
@@ -43,9 +44,10 @@ export function PlayerCard({
             {player.dummyOf && <span className="player-card__bot"> bot</span>}
             {!player.connected && <span className="player-card__offline"> offline</span>}
           </span>
-          <span className={`player-card__cash${player.cash < 0 ? ' player-card__cash--negative' : ''}`}>
-            {player.cash < 0 ? `-$${-player.cash}` : `$${player.cash}`}
-          </span>
+          <CashDelta
+            cash={player.cash}
+            className={`player-card__cash${player.cash < 0 ? ' player-card__cash--negative' : ''}`}
+          />
         </div>
         {player.inJail && <div className="player-card__jail">In prison (turn {player.jailTurns}/3)</div>}
         {owned.length > 0 && (

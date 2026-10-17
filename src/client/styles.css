@@ -837,6 +837,15 @@ button, input, select {
 .player-card__offline { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
 .player-card__cash { color: var(--money); font-size: 1rem; font-weight: 700; white-space: nowrap; }
 .player-card__cash--negative { color: var(--danger); }
+.cash-delta { position: relative; }
+/* Hangs under the balance's right edge, where the card is empty, and never takes space. */
+.cash-delta__bubble {
+  position: absolute; right: 0; top: 100%; line-height: 1;
+  font-size: 0.75rem; font-weight: 700; white-space: nowrap;
+  pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.cash-delta__bubble--gain { color: var(--money); }
+.cash-delta__bubble--loss { color: var(--danger); }
 .player-card__jail { color: var(--danger); font-size: 0.8rem; }
 .player-card__properties { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.25rem; }
 .property-dot { width: 8px; height: 8px; border-radius: 2px; }
