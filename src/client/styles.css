@@ -590,20 +590,21 @@ button, input, select {
   z-index: 3;
   border-radius: inherit;
   pointer-events: none;
-  background: color-mix(in srgb, var(--set) 28%, transparent);
-  box-shadow: 0 0 0 2px var(--set), 0 0 14px 2px var(--set);
+  background: color-mix(in srgb, var(--set) 38%, transparent);
+  box-shadow: 0 0 0 2px var(--set), 0 0 20px 4px var(--set);
+  filter: brightness(1.2);
   opacity: 0;
-  animation: set-glow 1.1s ease-out 0.25s both;
+  animation: set-glow 1.8s ease-out 0.25s both;
 }
 @keyframes set-glow {
-  15% { opacity: 1; }
-  45% { opacity: 0.85; }
+  10% { opacity: 1; }
+  55% { opacity: 0.9; }
   to { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tile__owner--new { animation: none; }
   .tile__shine { animation-duration: 0.3s; }
-  .tile__set-glow { animation-duration: 0.8s; }
+  .tile__set-glow { animation-duration: 1.2s; }
 }
 
 /* Houses used to float in the tile's corner, where they landed on top of the flag badge.
