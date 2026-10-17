@@ -53,3 +53,8 @@ export const LAND_BEAT_MS = 120;
 /** A cash change's floating `+$N` / `-$N`: how far it drifts (px) and how long it lives. */
 export const CASH_BUBBLE_DRIFT_PX = 6;
 export const CASH_BUBBLE_S = 1.1;
+
+/** A new log line: the older lines slide over in `LOG_SHIFT_S`, and the new one fades in after a beat. */
+export const LOG_SHIFT_S = 0.14;
+export const LOG_ENTER_DELAY_S = 0.1;
+export const LOG_ENTER_S = 0.16;
