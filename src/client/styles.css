@@ -54,7 +54,10 @@ button, input, select {
 /* ─── Buttons & inputs ──────────────────────────────────────────────── */
 
 .btn {
-  background: var(--surface-2);
+  /* A faint sheen rather than a flat fill, like the cards. Flat, the middle of a button is
+     one solid colour, which Chrome draws as its own piece while the button scales on hover,
+     and the joins to the rounded ends showed as hairlines. A gradient never has a solid run. */
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)), var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius);
