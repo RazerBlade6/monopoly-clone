@@ -3,9 +3,9 @@ import {
   animate, motion, useMotionValue, useReducedMotion, useTransform,
   type AnimationPlaybackControls,
 } from 'framer-motion';
-import type { GameMap, GameEvent, GameState, Player, Tile } from '../../shared/types';
+import type { CountryId, GameMap, GameEvent, GameState, Player, Tile } from '../../shared/types';
 import { CORNER_TRACK_RATIO, ringLayout, trackSpan, type Edge, type GridPos } from '../ringLayout';
-import { countryTint } from '../colors';
+import { countryColor, countryTint, tileShine } from '../colors';
 import { tileSubLabel } from '../tileArt';
 import { DICE_SPIN_S, DICE_STAGGER_S, JUMP_IN_S, JUMP_OUT_S, WALK_EASE } from '../motionTiming';
 import type { CardDrawnEvent, Presentation, TokenMotion } from '../playback';
@@ -534,6 +534,7 @@ export function Board({
   const template = tracks.map(t => `${t}fr`).join(' ');
   const units = tracks.reduce((a, b) => a + b, 0);
   const { rollId, motions, card: drawnCard } = presentation;
+  const setsCompleted = useSetsCompleted(map, state);
 
   return (
     <div
@@ -559,6 +560,7 @@ export function Board({
             owner={ownership ? ownerOf(state.players, ownership.owner) : null}
             houses={ownership?.houses ?? 0}
             hotel={ownership?.hotel ?? false}
+            setCompleted={tile.type === 'city' ? setsCompleted.get(tile.countryId) ?? 0 : 0}
             onClick={clickTile && isProperty(tile) ? el => clickTile(i, el) : undefined}
           />
         );
@@ -602,14 +604,49 @@ function isProperty(tile: Tile): boolean {
   return tile.type === 'city' || tile.type === 'airport' || tile.type === 'company';
 }
 
+/**
+ * Counts, per country, the times one player has come to hold all of it since the board
+ * mounted, by purchase or by trade. Sets already whole when the board first draws are not
+ * news. A tile keys its glow on its country's count, so each new completion replays it.
+ */
+function useSetsCompleted(map: GameMap, state: GameState): ReadonlyMap<CountryId, number> {
+  const holders = new Map<CountryId, string | null>();
+  for (const tile of map.tiles) {
+    if (tile.type !== 'city') continue;
+    const owner = state.tiles[tile.index]?.owner ?? null;
+    const held = holders.get(tile.countryId);
+    holders.set(tile.countryId, held === undefined || held === owner ? owner : null);
+  }
+  const signature = [...holders].map(([c, o]) => `${c}:${o ?? ''}`).join(',');
+
+  const [counts, setCounts] = useState<ReadonlyMap<CountryId, number>>(new Map());
+  const previous = useRef(holders);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = holders;
+    const fresh = [...holders].filter(([c, o]) => o !== null && before.get(c) !== o).map(([c]) => c);
+    if (fresh.length === 0) return;
+    setCounts(old => {
+      const next = new Map(old);
+      for (const c of fresh) next.set(c, (next.get(c) ?? 0) + 1);
+      return next;
+    });
+    // `signature` is `holders` in a form that only changes when a holder does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+  return counts;
+}
+
 function BoardTile({
-  tile, pos, owner, houses, hotel, onClick,
+  tile, pos, owner, houses, hotel, setCompleted, onClick,
 }: {
   tile: Tile;
   pos: { row: number; col: number; edge: Edge; isCorner: boolean };
   owner: Player | null;
   houses: number;
   hotel: boolean;
+  /** How many times this tile's country has become one player's whole set; each one glows. */
+  setCompleted: number;
   /** Present on properties, which open their deed card; the rest of the board is inert. */
   onClick?: (el: HTMLElement) => void;
 }) {
@@ -621,6 +658,8 @@ function BoardTile({
   const isJail = isCorner && tile.type === 'corner' && tile.subtype === 'jail';
   const acquired = useAcquired(owner?.id ?? null);
   const [shone, setShone] = useState(0);
+  const [glowed, setGlowed] = useState(0);
+  const countryId = tile.type === 'city' ? tile.countryId : null;
 
   return (
     <div
@@ -671,7 +710,22 @@ function BoardTile({
         />
       )}
       {acquired > shone && (
-        <div key={acquired} className="tile__shine" aria-hidden onAnimationEnd={() => setShone(acquired)} />
+        <div
+          key={`shine:${acquired}`}
+          className="tile__shine"
+          aria-hidden
+          style={{ ['--shine' as string]: tileShine(countryId) }}
+          onAnimationEnd={() => setShone(acquired)}
+        />
+      )}
+      {countryId && setCompleted > glowed && (
+        <div
+          key={`glow:${setCompleted}`}
+          className="tile__set-glow"
+          aria-hidden
+          style={{ ['--set' as string]: countryColor(countryId) }}
+          onAnimationEnd={() => setGlowed(setCompleted)}
+        />
       )}
     </div>
   );
