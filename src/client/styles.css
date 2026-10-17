@@ -77,6 +77,29 @@ button, input, select {
 .btn--quiet { background: transparent; border-color: transparent; color: var(--muted); align-self: center; }
 .btn--quiet:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
 
+/* Buttons give a little: they swell on hover, squash on press, and spring back past their
+   size when let go. Quick enough never to hold up a click. The springy curve overshoots,
+   which is the pop; the press itself is linear and faster, so it feels immediate. */
+.btn, .deed__close, .trade-modal__close {
+  transition: transform 0.18s cubic-bezier(0.34, 1.8, 0.64, 1), border-color 0.15s, filter 0.15s;
+}
+.btn:hover:not(:disabled), .deed__close:hover, .trade-modal__close:hover { transform: scale(1.05); }
+.btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
+/* A full-width button is already wide: the same share would read as a lurch. */
+.btn--big:hover:not(:disabled) { transform: scale(1.02); }
+.btn:active:not(:disabled), .deed__close:active, .trade-modal__close:active {
+  transform: scale(0.94);
+  transition-duration: 0.06s;
+  transition-timing-function: linear;
+}
+.btn--big:active:not(:disabled) { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .btn, .deed__close, .trade-modal__close { transition: border-color 0.15s, filter 0.15s; }
+  .btn:hover:not(:disabled), .btn:active:not(:disabled),
+  .deed__close:hover, .deed__close:active,
+  .trade-modal__close:hover, .trade-modal__close:active { transform: none; }
+}
+
 .input {
   background: var(--surface);
   border: 1px solid var(--border);
