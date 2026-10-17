@@ -82,10 +82,6 @@ button, input, select {
    which is the pop; the press itself is linear and faster, so it feels immediate. */
 .btn, .deed__close, .trade-modal__close {
   transition: transform 0.18s cubic-bezier(0.34, 1.8, 0.64, 1), border-color 0.15s, filter 0.15s;
-  /* Composited from the start, not only once a hover begins scaling it. Promoting a button
-     mid-hover reshuffles the layers around it, and the dice's 3D faces were re-rastered
-     with hairline seams across them. */
-  will-change: transform;
 }
 .btn:hover:not(:disabled), .deed__close:hover, .trade-modal__close:hover { transform: scale(1.05); }
 .btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
@@ -797,8 +793,6 @@ button, input, select {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  /* Its own layer for good (see `.btn`), so nothing animating nearby re-rasters it. */
-  will-change: transform;
 }
 .die__face {
   position: absolute;
@@ -819,6 +813,8 @@ button, input, select {
 .die__face--2 { transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__face--5 { transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2)); }
 .die__pip { border-radius: 50%; background: #1a1f2b; }
+/* The faces turned away from a die at rest (see `Die`). */
+.die__face--hidden { visibility: hidden; }
 .board__phase {
   font-size: calc(1rem * var(--tile-scale, 1));
   letter-spacing: 0.04em;
