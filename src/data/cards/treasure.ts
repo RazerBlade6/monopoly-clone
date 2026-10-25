@@ -2,12 +2,12 @@
  * Treasure deck (our Community Chest equivalent) — windfalls, refunds, small
  * civic payouts. Card count, effect types and dollar amounts are structurally
  * modeled on the official 16-card Community Chest deck catalogued in
- * `research/cards.md` (mechanics are not protectable — see SPEC.md §IP), but
+ * `research/cards.md` (mechanics are not protectable — see docs/PROJECT.md, "IP"), but
  * every `text` string here is original prose written for our travel theme.
  * No Hasbro proper nouns or card wording appear anywhere below.
  *
  * Map-safety note: the only `move_to` card targets tileIndex 0 (START), which
- * SPEC.md declares safe on every map. No card in this deck is Classic-index-
+ * exists on every map. No card in this deck is Classic-index-
  * dependent.
  */
 

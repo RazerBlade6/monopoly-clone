@@ -151,7 +151,7 @@ describe('negative balance and pay-as-you-go', () => {
   });
 });
 
-describe('multi-creditor debt in turn order (SPEC decision 13)', () => {
+describe('multi-creditor debt in turn order (docs/ENGINE.md decision 13)', () => {
   it('pays creditors in turn order up front, then pays the rest from later income in the same order', () => {
     // Four players. p1 (current) owes p2, p3 and p4 (in that turn order) 100 each via a
     // money_from_each(-100) card. With 150 in hand, p2 is paid in full and p3 gets 50.

@@ -727,7 +727,7 @@ of those would have been.
    demand, and whether a bot ever takes over an abandoned seat.
 7. **Spectator permissions** — can spectators chat? see full state?
 8. **Host migration** when the host leaves — no client-side evidence either way.
-9. **Token movement animation** — per-tile hop vs path tween; and the dice roll animation itself.
+9. ~~**Token movement animation**~~ — answered in `richup-motion-observed.md`: a smooth tween, measured.
 10. **Board emotes/reactions** separate from chat emoji — I found no evidence these exist.
 11. **What `Play` vs `All rooms` actually do** on the landing page.
 12. **No-bid auction outcome** — property back to bank, or re-auctioned?

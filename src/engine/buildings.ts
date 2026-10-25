@@ -4,8 +4,8 @@
  * is on, in which case supply is never checked or mutated.
  *
  * Even build (default on): a house may only be added to the group tile with
- * the fewest houses, and removed from the tile with the most (SPEC "Building
- * rules"). A hotel is treated as level 5 on the same 0-5 scale so the same
+ * the fewest houses, and removed from the tile with the most (docs/ENGINE.md,
+ * "Building and selling"). A hotel is treated as level 5 on the same 0-5 scale so the same
  * rule covers buy_hotel / sell_hotel too.
  */
 import type { GameMap, GameState, PlayerId, Tile } from '../shared/types';
@@ -122,7 +122,7 @@ export function sellHouse(map: GameMap, state: GameState, playerId: PlayerId, ti
 }
 
 /**
- * SPEC decision 17: selling a hotel always pays half its price. If the bank
+ * docs/ENGINE.md decision 17: selling a hotel always pays half its price. If the bank
  * has 4 spare houses, this tile alone converts hotel -> 4 houses and those
  * houses come from the bank. If it doesn't, a single-tile conversion is
  * impossible (there's nothing to place), so instead every hotel in the group

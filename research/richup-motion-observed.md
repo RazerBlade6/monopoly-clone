@@ -108,17 +108,3 @@ Tracked from the top edge of the dice, in units of one die height:
 - The turn buttons **fade out on click** and **fade back in** once the move has finished
   (~0.1 s each way). **[MEASURED]**
 
----
-
-## 5. How this compares to the clone (as of 2026-10-17, branch `playback-queue`)
-
-| | richup | clone |
-|---|---|---|
-| Dice flight | ~0.92 s, jump-cut launch, gravity arc to 0.67 die heights | 1.0 s toss to ~0.4 die heights, eased |
-| Dice pose at rest | isometric, three faces, per-die yaw | flat, front face only |
-| Dice shadows | separate ellipses left on the felt | none |
-| Dice size | ~13% of board width | ~9% |
-| Token walk | ~0.22 s for 7 tiles | ~0.6 s for 7 tiles (chosen; the user preferred this pace) |
-| Walk vs dice | overlap: token leaves at ~0.6 s into the flight | sequential: token leaves when the dice settle |
-| Token size in motion | grows, shrinks back after stopping | grows with speed, back to 1 at rest |
-| Prison | separate "In Prison" cell | cage drawn over the prisoner's token |

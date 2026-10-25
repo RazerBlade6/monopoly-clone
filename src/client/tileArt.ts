@@ -8,7 +8,7 @@ import type { CountryId, Tile } from '../shared/types';
  * Flags are round SVGs from circle-flags (MIT; see `assets/flags/README.md`), and the other
  * tiles' icons are SVGs from SVG Repo (see `assets/icons/README.md`), all bundled rather
  * than hotlinked so the app makes no third-party requests. An icon with no file yet falls
- * back to its emoji (see ASSETS.md).
+ * back to its emoji.
  */
 
 /** ISO 3166-1 alpha-2 codes, which are circle-flags' file names. */
@@ -46,7 +46,7 @@ const ICON_URLS = import.meta.glob<string>('./assets/icons/*.svg', {
   eager: true, query: '?url', import: 'default',
 });
 
-/** An icon file by its name in ASSETS.md, or null while that art hasn't been added. */
+/** An icon file by its name in `assets/icons/`, or null while that art hasn't been added. */
 export function iconUrl(name: IconName): string | null {
   return ICON_URLS[`./assets/icons/${name}.svg`] ?? null;
 }

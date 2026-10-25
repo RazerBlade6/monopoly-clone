@@ -222,7 +222,7 @@ function BuildControls({
   if (downgrade?.type === 'sell_house') downgradeCaption = `Payout $${houseSaleValue(tile)}`;
   if (downgrade?.type === 'sell_hotel') {
     // Without 4 spare houses the engine can't break one hotel, so it sells every hotel in the
-    // set at once (SPEC decision 17). The caption says so rather than understating the payout.
+    // set at once (docs/ENGINE.md decision 17). The caption says so rather than understating the payout.
     const breaksSingle = state.settings.unlimitedBuildings || state.bank.houses >= 4;
     if (breaksSingle) {
       downgradeCaption = `Payout $${hotelSaleValue(tile)}`;

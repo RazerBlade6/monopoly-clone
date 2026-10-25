@@ -131,7 +131,7 @@ export function countCompanies(map: GameMap, state: GameState, playerId: PlayerI
   return map.tiles.filter((t) => t.type === 'company' && state.tiles[t.index]!.owner === playerId).length;
 }
 
-/** Cash + printed price of every property owned + purchase price of every building owned (SPEC decision 28). */
+/** Cash + printed price of every property owned + purchase price of every building owned (docs/ENGINE.md decision 28). */
 export function netWorthForTax(map: GameMap, state: GameState, playerId: PlayerId): number {
   const player = getPlayer(state, playerId);
   let worth = player.cash;
@@ -147,7 +147,7 @@ export function netWorthForTax(map: GameMap, state: GameState, playerId: PlayerI
   return worth;
 }
 
-/** Half the purchase price of a house, rounded down (SPEC: "returns half the purchase price"). */
+/** Half the purchase price of a house, rounded down (docs/ENGINE.md, "Building and selling"). */
 export function houseSaleValue(tile: Extract<Tile, { type: 'city' }>): number {
   return Math.floor(tile.housePrice / 2);
 }

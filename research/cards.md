@@ -317,12 +317,3 @@ Rules for the implementation:
 Reason: richup's card content is entirely **server-side**. The client JS contains the deck *state* (`currentIndex`, `pardonCardHolderId`) but no card text and no effect-type enum — the rendered card string arrives over the game socket at draw time. Verified by exhaustive string extraction over `index.BAOd0zsy.js` (1.1 MB) and `GamePageContent-DcbcEFrO.js` (231 KB): zero hits for `advance`, `dividend`, `birthday`, `bank error`, `beauty`, `inherit`, `repairs`, or any card-like phrase. Public HTTP endpoints probed and rejected: `/api/game/maps/classic`, `/api/game/map/classic`, `/api/game/board/classic`, `/api/game/cards`, `/api/game/config`, `/api/game/settings` — all `{"error":"Not found"}`. `richup.io/info` and the blog (all 9 posts enumerated) contain no card list; searches of Reddit/YouTube/aggregators returned only reskin portals with no card text.
 
 **To resolve this**, someone must observe a live game: join a richup.io room, land on Surprise/Treasure spaces (or spectate), and record the card text + the socket payload. That is the only reliable path and it needs a browser session, not HTTP fetches.
-
-### Recommendation for the clone [RICHUP-DEFAULT proxy]
-
-Until a live capture is done, ship the **official 16/16 effect set from §3** but with **your own flavor text** and richup's vocabulary:
-
-- Rename decks **Surprise** (orange, Chance-equivalent) and **Treasure** (blue, CC-equivalent).
-- Rename **Get Out of Jail Free → Pardon card**; **Jail → Prison**; **Railroad → Airport**; **Utility → Company**; **Free Parking → Vacation**.
-- Keep the deck engine as array + `currentIndex` + `pardonCardHolderId` per deck — this matches richup's observed state shape exactly and is cheap to serialize.
-- Write original card strings. Copying Hasbro's exact wording is the one thing richup itself explicitly avoids.

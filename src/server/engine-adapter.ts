@@ -1,5 +1,5 @@
 /**
- * Thin adapter over the engine lane's pinned module API (SPEC.md "Module API"):
+ * Thin adapter over the engine's pinned module API (docs/ENGINE.md, "Public API"):
  *
  *   createGame(map, players, settings, rng): GameState
  *   reduce(map, state, pa, rng): { state, events }

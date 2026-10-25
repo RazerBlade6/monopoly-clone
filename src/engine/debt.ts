@@ -1,5 +1,5 @@
 /**
- * RESOLVING_DEBT: blocking phase, one active Debt at a time (SPEC decisions 4–6, 13).
+ * RESOLVING_DEBT: blocking phase, one active Debt at a time (docs/ENGINE.md decisions 4–6, 13).
  *
  * A charge the player can't cover takes everything they hold at once and leaves their
  * balance negative by the remainder, so while in debt `cash === -(amount + queued)`. From
@@ -84,7 +84,7 @@ export function totalOwed(debt: Debt): number {
 }
 
 /**
- * Opens a Debt for a charge the current player can't cover (SPEC decisions 4, 13). Their
+ * Opens a Debt for a charge the current player can't cover (docs/ENGINE.md decisions 4, 13). Their
  * balance drops by the whole charge, going negative, and whatever they held is then paid
  * over at once through the same routine as any later income.
  */
@@ -176,7 +176,7 @@ function forgiveDebtsTo(state: GameState, creditorId: PlayerId, events: GameEven
 }
 
 /**
- * Bankruptcy, whether declared in debt or as a concession (SPEC decisions 5, 30). Every
+ * Bankruptcy, whether declared in debt or as a concession (docs/ENGINE.md decisions 5, 30). Every
  * building goes back to the bank supply and every property becomes unowned again, so the
  * market gets it all back and nobody can be handed a lead. A creditor keeps what was already
  * paid and gets nothing more; any positive cash goes to the bank.
